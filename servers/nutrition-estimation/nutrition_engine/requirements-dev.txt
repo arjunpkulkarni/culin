@@ -1,0 +1,6 @@
+# Install: pip install -r requirements-dev.txt
+# Use with main requirements: pip install -r requirements.txt -r requirements-dev.txt
+
+-r requirements.txt
+pytest>=7.0,<9
+pytest-cov>=4.0,<6

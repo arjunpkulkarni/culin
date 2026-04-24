@@ -1,0 +1,179 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width"/><link rel="icon" href="/favicon/default/favicon.ico?v=2025-12-11"/><link rel="apple-touch-icon" sizes="180x180" href="/favicon/default/apple-touch-icon.png?v=2025-12-11"/><link rel="icon" type="image/png" sizes="32x32" href="/favicon/default/favicon-32x32.png?v=2025-12-11"/><link rel="icon" type="image/png" sizes="16x16" href="/favicon/default/favicon-16x16.png?v=2025-12-11"/><link rel="manifest" href="/favicon/default/site.webmanifest?v=2025-12-11"/><meta name="next-head-count" content="7"/><script type="text/javascript" src="https://www.kfc.com/assets/6b10766f77abc7ba6cf5fb288844b9c4b00124990c8"  ></script><script src="/env.js"></script><script>
+                (function () {
+                  // ---- Config pulled from template (with fallbacks) ----
+                  var TRANSCEND_URI = 'https://transcend-cdn.com/cm/d6de5d47-a47d-475d-b690-15a2f619e0f7/airgap.js';
+                  var GTM_ID = 'GTM-KSDQC83';
+                  var MAPS_KEY = 'AIzaSyCWlUgi5DdDkkRkvuxy3omRgdFJTuk2LBY';
+                  var QUIQ_SLUG = 'kfcus';
+                  var QUIQ_CONFIG_ID = 'customer-support';
+                  var QUIQ_STATUS_EVENT = 'statusChanged';
+
+                  // Clean up any 'undefined' strings that made it through
+                  if (TRANSCEND_URI === 'undefined') TRANSCEND_URI = '';
+                  if (GTM_ID === 'undefined') GTM_ID = '';
+                  if (MAPS_KEY === 'undefined') MAPS_KEY = '';
+                  if (QUIQ_SLUG === 'undefined') QUIQ_SLUG = '';
+                  if (QUIQ_CONFIG_ID === 'undefined') QUIQ_CONFIG_ID = '';
+                  if (QUIQ_STATUS_EVENT === 'undefined') QUIQ_STATUS_EVENT = '';
+
+                  window.__gpp_addFrame=function(e){if(!window.frames[e]){if(document.body){var t=document.createElement("iframe");t.style.cssText="display:none",t.name=e,document.body.appendChild(t)}else window.setTimeout(window.__gppaddFrame,10,e)}},window.__gpp_stub=function(){var e=arguments;if(__gpp.queue=__gpp.queue||[],!e.length)return __gpp.queue;var t=e[0],a=e.length>1?e[1]:null,n=e.length>2?e[2]:null;if("ping"===t)return{gppVersion:"1.1",cmpStatus:"stub",cmpDisplayStatus:"hidden",supportedAPIs:["2:tcfeuv2","5:tcfcav1","6:uspv1"],cmpId:31,sectionList:[],applicableSections:[-1],gppString:""};if("events"===t)return __gpp.events;if("addEventListener"===t){__gpp.events=__gpp.events||[],"lastId"in __gpp||(__gpp.lastId=0),__gpp.lastId++;var s=__gpp.lastId;return __gpp.events.push({id:s,callback:a,parameter:n}),{eventName:"listenerRegistered",listenerId:s,data:!0,pingData:{gppVersion:"1.1",cmpStatus:"stub",cmpDisplayStatus:"hidden",supportedAPIs:["2:tcfeuv2","5:tcfcav1","9:usva","7:usnat"],cmpId:31,sectionList:[],applicableSections:[-1],gppString:""}}}if("removeEventListener"===t){var p=!1;__gpp.events=__gpp.events||[];for(var i=0;i<__gpp.events.length;i++)if(__gpp.events[i].id==n){__gpp.events[i].splice(i,1),p=!0;break}return{eventName:"listenerRemoved",listenerId:n,data:p,pingData:{gppVersion:"1.1",cmpStatus:"stub",cmpDisplayStatus:"hidden",supportedAPIs:["2:tcfeuv2","5:tcfcav1","9:usva","7:usnat"],cmpId:31,sectionList:[],applicableSections:[-1],gppString:""}}}if("hasSection"===t||"getSection"===t||"getField"===t)return null;__gpp.queue.push([].slice.apply(e))},window.__gpp_msghandler=function(e){var t="string"==typeof e.data;try{var a=t?JSON.parse(e.data):e.data}catch(n){var a=null}if("object"==typeof a&&null!==a&&"__gppCall"in a){var s=a.__gppCall;window.__gpp(s.command,function(a,n){var p={__gppReturn:{returnValue:a,success:n,callId:s.callId}};e.source.postMessage(t?JSON.stringify(p):p,"*")},"parameter"in s?s.parameter:null,"version"in s?s.version:"1.1")}},"__gpp"in window&&"function"==typeof window.__gpp||(window.__gpp=window.__gpp_stub,window.addEventListener("message",window.__gpp_msghandler,!1),window.__gpp_addFrame("__gppLocator"));
+
+                  // ---- Logging helpers ----
+                  var NS = '[bootstrap]';
+                  var once = function (key, fn) {
+                    var w = window;
+                    var flag = '__loaded_' + key;
+                    if (w[flag]) return false;
+                    w[flag] = true;
+                    try { fn(); } catch (e) { console.error(NS, key, 'threw', e); }
+                    return true;
+                  };
+                  var assert = function (cond, msg) {
+                    if (!cond) { console.warn(NS, '⚠️', msg); }
+                  };
+
+
+                  // ---- Basic config assertions ----
+                  assert(!!TRANSCEND_URI, 'transcendScriptUri is missing');
+                  assert(!!GTM_ID, 'GA_TRACKING_ID / GTM container id is missing');
+                  assert(!!MAPS_KEY, 'googleMapsApiKey is missing');
+                  assert(!!QUIQ_SLUG, 'quiqSlug is missing');
+                  assert(!!QUIQ_CONFIG_ID, 'CHAT_CONFIGURATION_ID is missing');
+
+                  // ---- Utilities ----
+                  function loadScript(src, attrs, onload, onerror) {
+                    var s = document.createElement('script');
+                    s.src = src;
+                    s.async = true;
+                    if (attrs) Object.keys(attrs).forEach(function (k) { s.setAttribute(k, attrs[k]); });
+                    if (onload) s.onload = onload;
+                    s.onerror = onerror || function (e) { console.error(NS, 'failed to load', src, e); };
+                    document.head.appendChild(s);
+                    return s;
+                  }
+
+                  // ---- Load Transcend (Airgap) first ----
+                  once('transcend', function () {
+                    if (!TRANSCEND_URI) return;
+
+                    loadScript(TRANSCEND_URI, null, function () {
+
+                      // Wait for airgap to be available, then for airgap.ready
+                      var readyFired = false;
+                      var onReady = function () {
+                        if (readyFired) return;
+                        readyFired = true;
+
+                        // 1) Initialize dataLayer + default consent (denied by default)
+                        window.dataLayer = window.dataLayer || [];
+                        function gtag(){ window.dataLayer.push(arguments); }
+
+                        gtag('consent', 'default', {
+                          'ad_storage': 'denied',
+                          'ad_user_data': 'denied',
+                          'ad_personalization': 'denied',
+                          'analytics_storage': 'denied',
+                          'functionality_storage': 'denied',
+                          'personalization_storage': 'denied',
+                          'security_storage': 'denied',
+                        });
+
+                        // 2) Load Google Tag Manager
+                        once('gtm', function () {
+                          if (!GTM_ID) { console.warn(NS, 'Skipping GTM; missing GTM_ID'); return; }
+                          (function(w,d,s,l,i){
+                            w[l]=w[l]||[];
+                            w[l].push({'gtm.start': new Date().getTime(), event:'gtm.js'});
+                            var f=d.getElementsByTagName(s)[0],
+                                j=d.createElement(s), dl=l!='dataLayer'?'&l='+l:'';
+                            j.async=true; j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
+                            f.parentNode.insertBefore(j,f);
+                          })(window,document,'script','dataLayer', GTM_ID);
+                        });
+
+                        // 3) Load Google Maps
+                        once('maps', function () {
+                          if (!MAPS_KEY) { console.warn(NS, 'Skipping Maps; missing key'); return; }
+                          var mapsUrl = 'https://maps.googleapis.com/maps/api/js?key=' + MAPS_KEY + '&loading=async&libraries=places';
+                          loadScript(mapsUrl, null, function () {
+                          });
+                        });
+
+                        // 4) Load Quiq Chat
+                        once('quiq', function () {
+                          if (!QUIQ_SLUG || !QUIQ_CONFIG_ID) { console.warn(NS, 'Skipping Quiq; missing slug or config id'); return; }
+                          var quiqUrl = 'https://' + QUIQ_SLUG + '.quiq-api.com/app/chat-ui/index.js';
+                          loadScript(quiqUrl, { type: 'text/javascript' }, function () {
+                            try {
+                              window.chat = window.Quiq({
+                                pageConfigurationId: QUIQ_CONFIG_ID,
+                              });
+                              if (window.chat && typeof window.chat.on === 'function') {
+                                window.chat.on('statusChanged', function () {
+                                  if (QUIQ_STATUS_EVENT) {
+                                    window.dispatchEvent(new Event(QUIQ_STATUS_EVENT));
+                                  }
+                                });
+                              } else {
+                                console.warn(NS, 'Quiq chat object not available or missing .on');
+                              }
+                            } catch (e) {
+                              console.error(NS, 'Quiq init failed', e);
+                            }
+                          });
+                        });
+                      };
+
+                      // Poll for airgap availability, then wait for ready
+                      var pollForAirgap = function() {
+                        var attempts = 0;
+                        var maxAttempts = 50; // 5 seconds at 100ms intervals
+                        
+                        var checkAirgap = function() {
+                          attempts++;
+                          
+                          try {
+                            if (window.airgap && typeof window.airgap.on === 'function') {
+                              window.airgap.on('ready', onReady);
+                              
+                              // Additional safety timeout for ready event
+                              setTimeout(function () {
+                                if (!readyFired) {
+                                  console.warn(NS, 'airgap.ready event not fired within 3s; proceeding anyway');
+                                  onReady();
+                                }
+                              }, 3000);
+                              
+                            } else if (attempts >= maxAttempts) {
+                              onReady();
+                            } else {
+                              // Keep polling
+                              setTimeout(checkAirgap, 100);
+                            }
+                          } catch (e) {
+                            // console.error(NS, 'Error checking airgap availability', e);
+                            if (attempts >= maxAttempts) {
+                              onReady();
+                            } else {
+                              setTimeout(checkAirgap, 100);
+                            }
+                          }
+                        };
+                        
+                        checkAirgap();
+                      };
+                      
+                      // Start polling for airgap
+                      pollForAirgap();
+                    });
+                  });
+
+                })();
+              </script><link rel="icon" href="/favicon.ico" type="image/x-icon"/><link data-next-font="" rel="preconnect" href="/" crossorigin="anonymous"/><link rel="preload" as="script" href="https://www.kfc.com/assets/6b10766f77abc7ba6cf5fb288844b9c4b00124990c8"/><link rel="preload" href="/_next/static/css/0a6a01bf5d603a68.css" as="style"/><link rel="stylesheet" href="/_next/static/css/0a6a01bf5d603a68.css" data-n-g=""/><link rel="preload" href="/_next/static/css/3dab1c55d45aac4a.css" as="style"/><link rel="stylesheet" href="/_next/static/css/3dab1c55d45aac4a.css" data-n-p=""/><noscript data-n-css=""></noscript><script defer="" nomodule="" src="/_next/static/chunks/polyfills-42372ed130431b0a.js"></script><script src="/_next/static/chunks/webpack-bdbbac224381ab87.js" defer=""></script><script src="/_next/static/chunks/framework-945b357d4a851f4b.js" defer=""></script><script src="/_next/static/chunks/main-4e9de14415087546.js" defer=""></script><script src="/_next/static/chunks/pages/_app-66535433917e61c3.js" defer=""></script><script src="/_next/static/chunks/1247-d8ac91121a4c4372.js" defer=""></script><script src="/_next/static/chunks/324-2bd842976e28a4da.js" defer=""></script><script src="/_next/static/chunks/2960-6356686b0e3a8551.js" defer=""></script><script src="/_next/static/chunks/3184-e2b7a5deadcdb9fa.js" defer=""></script><script src="/_next/static/chunks/pages/nutrition-102df985c2098b1a.js" defer=""></script><script src="/_next/static/uHSuhvJlBxXevl8ExpcW6/_buildManifest.js" defer=""></script><script src="/_next/static/uHSuhvJlBxXevl8ExpcW6/_ssgManifest.js" defer=""></script><script >bazadebezolkohpepadr="95930867"</script><script type="text/javascript" src="https://www.kfc.com/akam/13/5b7c83b"  defer></script></head><body><noscript>
+                <iframe
+                  src="https://www.googletagmanager.com/ns.html?id=GTM-KSDQC83"
+                  height="0"
+                  width="0"
+                  style="display:none;visibility:hidden"
+                ></iframe>
+              </noscript><div id="__next"></div><div style="display:none" id="quiqchat"></div><script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"isPreview":false,"appIcon":"Default","featureFlagEnv":"webProduction","featureFlagUri":"https://www.kfc.com","aloricaKfcEndpoint":"www.kfc.com","aloricaEndpoint":"https://webto.salesforce.com/servlet/servlet.WebToCase?encoding=UTF-8","aloricaOrgId":"00D6g000000uy5T","aloricaRecordType":"0126g0000019nMT","aloricaPersonalAddress":"00N6g00000TGTeC","aloricaDine":"00N6g00000TGTeB","aloricaResNumber":"00N6g00000K561Y","applePayMerchantId":"merchant.com.kfc.us","cartEndpoint":"https://www.kfc.com/api/v1","chatbotTokenUrl":"https://kfc-peus-digitalordering-chatbot.azurewebsites.net/api/directline/token","chatbotTokenRefreshUrl":"https://directline.botframework.com/v3/directline/tokens/refresh","chatbotLiveAgentReceiveMessageUrl":"https://kfc-peus-digitalordering-chatbot.azurewebsites.net/api/livechat/Messages","chatbotLiveAgentSendMessageUrl":"https://kfc-peus-digitalordering-chatbot.azurewebsites.net/api/livechat/Messages","clientId":"ff9b2276dcca7bcc7c98f952ab1d4a3c","contentfulSpace":"9tka4b3550oc","contentfulEnvironment":"master","contentfulAccessToken":"FHuSAe7OIrG7H1IKzTRLJdpUNS98vCzEAI7LTspAeo0","customerEndpoint":"https://www.kfc.com/api/v1","customerPaymentIframeEndpoint":"https://www.kfc.com/api/v1/payments/routes/{cid}/cardcaptures?brand_type=KC\u0026country_code=US\u0026tender_type=BC\u0026page_type=CO\u0026locale_code=en","customerPaymentsEndpoint":"https://www.kfc.com/api/v1/payments/customers/{cid}/tenders","dataDogClientToken":"pubfbb66b9b9be0d817eeaf9027ca75c912","defaultRestaurantId":"A111111","googlePayEnvironment":"PRODUCTION","googlePayMerchantId":"BCR2DN6TV7TYR6QP","googlePayGatewayId":"376246695997","gqlEndpoint":"https://www.kfc.com/api/v1/stores/menu/graphql","storefrontEndpoint":"https://www.kfc.com/api/kfc_us/storefront/graphql","host":"www.kfc.com","isAuthCallback":false,"isPreProduction":false,"managementPaymentIframeEndpoint":"https://www.kfc.com/api/v1/payments/routes/{cid}/cardcaptures?brand_type=KC\u0026country_code=US\u0026tender_type=BC\u0026page_type=AM\u0026locale_code=en","mparticleKey":"us1-dabd7ce671f8fc40b835a24a2604ec5a","mparticleEnv":"production","mParticleKfcEndpoint":"https://dataeat.kfc.com/promotions/{mpid}/{attribute}","mParticleAttributesKfcEndpoint":"https://dataeat.kfc.com/attributes/{mpid}/{attribute}","mParticleKfcToken":"VhzRJ2EQu6un","mParticleAttributesKfcToken":"B6zS87FOZRd3","orderEndpoint":"https://www.kfc.com/api/v1/orders/graphql","paymentIframeEndpoint":"https://www.kfc.com/api/v1/payments/routes/cardcaptures?brand_type=KC\u0026country_code=US\u0026tender_type=BC\u0026page_type=GC\u0026locale_code=en","release":5,"rumApplicationId":"722245ba-6d40-4d8c-83d9-5709a6f8b397","seo":{"title":"KFC® Nutrition Calculator \u0026 Facts | KFC®","description":"Use our nutrition calculator to discover dietary information about your favorite KFC® menu items, including calories and other nutrition facts.","canonicalLink":"/nutrition"},"siteNavigation":[{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"3DhjFhaoQ8INEultdkvqeX","type":"Entry","createdAt":"2020-11-09T17:57:06.946Z","updatedAt":"2020-11-09T17:57:06.946Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":2,"revision":1,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"footerLink"}},"locale":"en-US"},"fields":{"title":"Menu","url":"/menu"}},{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"6MYJ2jnxFFtYOIWEhcjsl2","type":"Entry","createdAt":"2024-10-07T20:53:21.602Z","updatedAt":"2024-11-06T13:25:49.999Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":9,"revision":4,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"footerLink"}},"locale":"en-US"},"fields":{"title":"Gift Cards","url":"https://kfccard.wolfe.com/","isExternalLink":true}},{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"3FtBnBAGFJRKKkAC0k3NFx","type":"Entry","createdAt":"2020-11-09T18:09:39.907Z","updatedAt":"2020-11-09T18:09:39.907Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":2,"revision":1,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"footerLink"}},"locale":"en-US"},"fields":{"title":"About KFC","page":{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"2GDL5jVKN1ds1BEDwHdKiK","type":"Entry","createdAt":"2020-08-13T02:16:58.297Z","updatedAt":"2023-08-04T14:49:32.124Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":57,"revision":22,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"page"}},"locale":"en-US"},"fields":{"pageTitle":"About","slug":"about","seo":{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"2YEFrqfVdpGZILamGoy12X","type":"Entry","createdAt":"2020-09-11T04:04:28.616Z","updatedAt":"2023-06-15T13:44:37.695Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":17,"revision":7,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"seoMeta"}},"locale":"en-US"},"fields":{"title":"About","canonicalLink":"/about"}},"modules":[{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"2BZgQPiG4DScU895bAcHN","type":"Entry","createdAt":"2020-08-13T02:39:52.448Z","updatedAt":"2021-02-26T01:42:15.415Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":25,"revision":9,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"heroAboutPage"}},"locale":"en-US"},"fields":{"heading":"If You Like Fried Chicken, This Is Why","mediaAsset":{"sys":{"type":"Link","linkType":"Entry","id":"6X9dlyBpyiCudl8woOSZit"}},"title":"About KFC","body":{"nodeType":"document","data":{},"content":[{"nodeType":"paragraph","content":[{"nodeType":"text","value":"We make fried chicken—heck, we practically invented it. If they ever make a food hall of fame, our chicken is gonna be a first-ballot inductee.","marks":[],"data":{}}],"data":{}}]}}},{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"7dbwnfMmQ62ZtJWhHluRKB","type":"Entry","createdAt":"2020-05-28T03:07:31.521Z","updatedAt":"2024-03-19T15:42:34.315Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":52,"revision":14,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"bannerHowItsMade"}},"locale":"en-US"},"fields":{"eyebrow":"Our Food","heading":"We Make it the Hard Way","body":{"data":{},"content":[{"data":{},"content":[{"data":{},"marks":[],"value":"See what goes into making our world famous fried chicken.","nodeType":"text"}],"nodeType":"paragraph"}],"nodeType":"document"},"cta":{"sys":{"type":"Link","linkType":"Entry","id":"6gYGV5LktvEkgvTiOiFAH2"}},"badge":{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"pUxlFVRTxLtL5kOkls4oR","type":"Asset","createdAt":"2020-09-29T19:45:22.896Z","updatedAt":"2020-09-29T19:45:22.896Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":4,"revision":1,"locale":"en-US"},"fields":{"title":"herbs-badge","description":"Herbs \u0026 Spices","file":{"url":"//images.ctfassets.net/9tka4b3550oc/pUxlFVRTxLtL5kOkls4oR/79e616624a7269fa05b88538b8d5f305/herbs-badge.png","details":{"size":251675,"image":{"width":760,"height":760}},"fileName":"herbs-badge.png","contentType":"image/png"}}},"mediaAsset":{"sys":{"type":"Link","linkType":"Entry","id":"1QYbJMCyUfBx3trQOKNve6"}}}},{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"59AshTxLRxW9EzdCHzsTvf","type":"Entry","createdAt":"2020-08-18T20:09:57.620Z","updatedAt":"2021-02-10T22:51:06.043Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":11,"revision":4,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"storyNarrow"}},"locale":"en-US"},"fields":{"style":"Narrow","heading":"The Man, The Myth, The Legend","title":"In The Beginning","body":{"data":{},"content":[{"data":{},"content":[{"data":{},"marks":[],"value":"It all began with the man, the myth, the legend himself. In 1930, in a humble service station in Corbin, Kentucky, 40-year old Harland Sanders began feeding hungry travellers. Sanders spent the next nine years (now that's dedication) perfecting his secret blend of 11 herbs and spices, as well as the basic cooking technique we still use today. There are now over 24,000 KFC outlets in more than 145 countries and territories around the world.","nodeType":"text"}],"nodeType":"paragraph"}],"nodeType":"document"},"mediaAsset":{"sys":{"type":"Link","linkType":"Entry","id":"tDaAAuJeGlG1ilfKA7u8s"}}}},{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"2x9ASIVpsS78Zwu38hjMhu","type":"Entry","createdAt":"2021-02-10T22:52:17.132Z","updatedAt":"2021-04-02T17:36:27.873Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":11,"revision":3,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"storyNarrow"}},"locale":"en-US"},"fields":{"style":"Wide","heading":"The Legacy Lives On","body":{"nodeType":"document","data":{},"content":[{"nodeType":"paragraph","content":[{"nodeType":"text","value":"Times change but values don’t. And just like the Colonel, we know that nothing beats the value of hard work. It’s what goes into every good old fashioned meal we make. It’s also why, after more than 90 years, folks all over the world keep coming back for more.","marks":[],"data":{}}],"data":{}}]},"mediaAsset":{"sys":{"type":"Link","linkType":"Entry","id":"3Av3Wnyg7HRjQaq35YlnGR"}}}},{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"6JKvloQuhcN9YkOWSiNrsj","type":"Entry","createdAt":"2020-08-18T21:52:40.135Z","updatedAt":"2023-08-04T14:08:33.650Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":26,"revision":10,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"bannerCard"}},"locale":"en-US"},"fields":{"name":"What Made Us Great Is Still What Makes Us Great","style":"Card Right","mediaAsset":{"sys":{"type":"Link","linkType":"Entry","id":"1PqDh8IBQCfoAzcJWKMnGA"}},"heading":"What Made Us Great Is Still What Makes Us Great","body":{"nodeType":"document","data":{},"content":[{"nodeType":"paragraph","data":{},"content":[{"nodeType":"text","value":"KFC is one of the few brands in America that can boast a rich, decades-long history of success \u0026 innovation. We’re at over 24,000 locations and more than 145 countries \u0026 territories around the world. And you know what? There’s still a cook in a kitchen in every last one of them, preparing delicious, complete family meals at affordable prices.","marks":[],"data":{}}]}]}}},{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"4ttU2KJLdUSVTt58j0fTXl","type":"Entry","createdAt":"2020-08-18T22:50:12.026Z","updatedAt":"2021-02-09T21:31:14.368Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":21,"revision":8,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"pageRouting"}},"locale":"en-US"},"fields":{"title":"KFC","labelPrimary":"How We Make Chicken","urlPrimary":"/about/how-we-make-chicken","imagePrimaryAsset":{"sys":{"type":"Link","linkType":"Entry","id":"4f0ML86j1wbggTOEYTCqHc"}},"labelSecondary":"Company Responsibility","urlSecondary":"/about/company-responsibility","imageSecondaryAsset":{"sys":{"type":"Link","linkType":"Entry","id":"3FXLk1QmY6Oqkkr5MYNRSx"}},"name":"About"}},{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"5urGRXu5TMaYZuAQGB40nB","type":"Entry","createdAt":"2021-03-01T21:29:49.637Z","updatedAt":"2023-03-06T22:10:10.699Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":18,"revision":5,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"bannerCard"}},"locale":"en-US"},"fields":{"name":"Colonel's Club Sign Up","style":"Colonel's Club Sign Up","heading":"Unlock More Finger Lickin' Good Benefits","body":{"nodeType":"document","data":{},"content":[{"nodeType":"paragraph","data":{},"content":[{"nodeType":"text","value":"Create an account to get access to great deals and faster checkout.","marks":[],"data":{}}]}]},"cta":{"sys":{"type":"Link","linkType":"Entry","id":"55Dkt6bHYdQQyOXVU4iNnm"}}}}]}}}},{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"63H0GbiwgWXMhmyU68ITlU","type":"Entry","createdAt":"2023-07-06T16:20:28.801Z","updatedAt":"2023-07-06T16:20:28.801Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":5,"revision":1,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"footerLink"}},"locale":"en-US"},"fields":{"title":"Merch","url":"https://kfcshop.com/","isExternalLink":true}},{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"3WOpbxYL2KlUSxAkC94nX6","type":"Entry","createdAt":"2021-01-27T18:51:15.899Z","updatedAt":"2021-01-27T18:51:15.899Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":3,"revision":1,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"footerLink"}},"locale":"en-US"},"fields":{"title":"Find A KFC","url":"https://locations.kfc.com/search","isExternalLink":true}},{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"6kt4pCSD7aqI0kjo9kOObh","type":"Entry","createdAt":"2022-02-10T15:43:32.010Z","updatedAt":"2022-02-10T15:43:32.010Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":6,"revision":1,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"footerLinkGroup"}},"locale":"en-US"},"fields":{"title":"More","links":[{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"2HghYD9yEwhEaUml2DNTqO","type":"Entry","createdAt":"2022-02-10T15:43:16.306Z","updatedAt":"2022-02-10T15:43:16.306Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":3,"revision":1,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"footerLink"}},"locale":"en-US"},"fields":{"title":"Help","page":{"metadata":{"tags":[],"concepts":[]},"sys":{"space":{"sys":{"type":"Link","linkType":"Space","id":"9tka4b3550oc"}},"id":"751G06FhLZAH8qfHMU2IqJ","type":"Entry","createdAt":"2020-08-21T06:27:28.889Z","updatedAt":"2021-11-12T18:42:23.034Z","environment":{"sys":{"id":"master","type":"Link","linkType":"Environment"}},"publishedVersion":68,"revision":20,"contentType":{"sys":{"type":"Link","linkType":"ContentType","id":"page"}},"locale":"en-US"},"fields":{"pageTitle":"FAQ","slug":"faq","seo":{"sys":{"type":"Link","linkType":"Entry","id":"4j3tRYwXYQggJxc6fHd5K3"}},"mediaAsset":{"sys":{"type":"Link","linkType":"Entry","id":"3B6YmuMHsNMCNpsi3GJCca"}},"eyebrow":"Help","sideBar":{"sys":{"type":"Link","linkType":"Entry","id":"2JFzdnKwEIP8xwik8WQAMs"}},"modules":[{"sys":{"type":"Link","linkType":"Entry","id":"54ALCE9RlL8jFCaxvgspt2"}},{"sys":{"type":"Link","linkType":"Entry","id":"5rOiSgvZugH9mrJ4X1JRQi"}},{"sys":{"type":"Link","linkType":"Entry","id":"7gFHOkn7RFY6ddk0NsQpjJ"}},{"sys":{"type":"Link","linkType":"Entry","id":"5LNBEkBk0PSUOW2bNTy9kr"}},{"sys":{"type":"Link","linkType":"Entry","id":"3IaZQBIjjdkM9CxfwNw2Zo"}},{"sys":{"type":"Link","linkType":"Entry","id":"6ySVMyhJ7MPJZkRLcPseib"}},{"sys":{"type":"Link","linkType":"Entry","id":"2zi6kw4pLF1eIaxUNcEBc4"}},{"sys":{"type":"Link","linkType":"Entry","id":"dZ3gby585GltQChzbsOTr"}},{"sys":{"type":"Link","linkType":"Entry","id":"5JED299n6na8c9WjB2HzRh"}},{"sys":{"type":"Link","linkType":"Entry","id":"5f1klZqdwdABK17REremAv"}}]}}}}]}}]}},"page":"/nutrition","query":{},"buildId":"uHSuhvJlBxXevl8ExpcW6","isFallback":false,"isExperimentalCompile":false,"appGip":true,"scriptLoader":[]}</script><script type="text/javascript"  src="/a46rNy/o80/O0X/5uqg9Yur/Vic7XhpEN91upk/BVlZblY_cBA/Cj/50dAJJJA0C"></script><noscript><img src="https://www.kfc.com/akam/13/pixel_5b7c83b?a=dD00NGMzYTZkMWE1MGRmZmE1YTY4MWRiODk1NGZjZTJiN2RiYTUzOTAxJmpzPW9mZg==" style="visibility: hidden; position: absolute; left: -999px; top: -999px;" /></noscript></body></html>

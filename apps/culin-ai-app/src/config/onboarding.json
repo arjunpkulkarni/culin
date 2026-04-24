@@ -1,0 +1,349 @@
+{
+  "onboarding": {
+    "version": "1.0",
+    "totalSteps": 6,
+    "steps": [
+      {
+        "id": 1,
+        "title": "Let's start with the basics",
+        "subtitle": "Tell us a little about yourself",
+        "icon": "person",
+        "gradient": "purple",
+        "fields": [
+          {
+            "id": "name",
+            "type": "text",
+            "label": "Your Name",
+            "placeholder": "John Doe",
+            "required": true,
+            "icon": "person",
+            "validation": {
+              "minLength": 2,
+              "maxLength": 50
+            }
+          },
+          {
+            "id": "dateOfBirth",
+            "type": "date",
+            "label": "Date of Birth",
+            "placeholder": "YYYY-MM-DD",
+            "required": true,
+            "icon": "cake",
+            "validation": {
+              "minAge": 13,
+              "maxAge": 120
+            }
+          },
+          {
+            "id": "height",
+            "type": "number",
+            "label": "Height (cm)",
+            "placeholder": "170",
+            "required": true,
+            "icon": "height",
+            "validation": {
+              "min": 50,
+              "max": 250
+            }
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "A few more details",
+        "subtitle": "This helps us personalize your experience",
+        "icon": "assignment",
+        "gradient": "blue",
+        "fields": [
+          {
+            "id": "weight",
+            "type": "number",
+            "label": "Weight (kg)",
+            "placeholder": "70",
+            "required": true,
+            "icon": "monitor-weight",
+            "validation": {
+              "min": 20,
+              "max": 300
+            }
+          },
+          {
+            "id": "sex",
+            "type": "single-select",
+            "label": "Biological Sex",
+            "required": true,
+            "options": [
+              { "label": "Male", "value": "M", "icon": "male" },
+              { "label": "Female", "value": "F", "icon": "female" },
+              { "label": "Other", "value": "Other", "icon": "transgender" }
+            ]
+          },
+          {
+            "id": "activityLevel",
+            "type": "chips",
+            "label": "Activity Level",
+            "required": true,
+            "multiple": false,
+            "columns": 2,
+            "options": [
+              { "label": "Sedentary", "value": "sedentary", "icon": "event-seat" },
+              { "label": "Light Activity", "value": "light", "icon": "directions-walk" },
+              { "label": "Moderate", "value": "moderate", "icon": "directions-run" },
+              { "label": "Very Active", "value": "active", "icon": "fitness-center" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "What are your goals?",
+        "subtitle": "Select all that apply",
+        "icon": "track-changes",
+        "gradient": "green",
+        "fields": [
+          {
+            "id": "goals",
+            "type": "chips",
+            "label": "Goals",
+            "required": true,
+            "multiple": true,
+            "columns": 2,
+            "options": [
+              { "label": "Lose Fat", "value": "lose_fat", "icon": "trending-down" },
+              { "label": "Build Muscle", "value": "build_muscle", "icon": "fitness-center" },
+              { "label": "Mental Health", "value": "mental_health", "icon": "psychology" },
+              { "label": "Better Sleep", "value": "sleep", "icon": "bedtime" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Alcohol consumption",
+        "subtitle": "How many drinks per week?",
+        "icon": "local-bar",
+        "gradient": "lime",
+        "fields": [
+          {
+            "id": "alcoholUse",
+            "type": "slider",
+            "label": "Drinks per week",
+            "required": false,
+            "min": 0,
+            "max": 21,
+            "step": 1,
+            "defaultValue": 0,
+            "formatValue": "{value} drinks/week",
+            "leftLabel": "None",
+            "rightLabel": "21+"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Any medical conditions?",
+        "subtitle": "Optional - select any that apply",
+        "icon": "medical-services",
+        "gradient": "sunset",
+        "fields": [
+          {
+            "id": "medicalConditions",
+            "type": "chips",
+            "label": "Medical Conditions",
+            "required": false,
+            "multiple": true,
+            "columns": 2,
+            "options": [
+              { "label": "Type 2 Diabetes", "value": "diabetes", "icon": "medical-services" },
+              { "label": "High BP", "value": "high_bp", "icon": "favorite" },
+              { "label": "Heart Disease", "value": "heart_disease", "icon": "favorite-border" },
+              { "label": "PCOS", "value": "pcos", "icon": "healing" },
+              { "label": "IBS", "value": "ibs", "icon": "sick" },
+              { "label": "Food Allergies", "value": "allergies", "icon": "warning" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Anything else we should know?",
+        "subtitle": "Optional - add any additional notes",
+        "icon": "notes",
+        "gradient": "midnight",
+        "fields": [
+          {
+            "id": "additionalNotes",
+            "type": "textarea",
+            "label": "Additional Notes",
+            "placeholder": "Dietary preferences, allergies, etc...",
+            "required": false,
+            "icon": "edit",
+            "validation": {
+              "maxLength": 500
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "designSystem": {
+    "spacing": {
+      "xs": 4,
+      "sm": 8,
+      "md": 16,
+      "lg": 24,
+      "xl": 32,
+      "xxl": 48,
+      "xxxl": 64
+    },
+    "radius": {
+      "sm": 12,
+      "md": 16,
+      "lg": 24,
+      "xl": 32,
+      "full": 9999
+    },
+    "fontSize": {
+      "xs": 12,
+      "sm": 14,
+      "base": 16,
+      "lg": 18,
+      "xl": 20,
+      "xxl": 24,
+      "xxxl": 32,
+      "huge": 40,
+      "massive": 48
+    },
+    "fontWeight": {
+      "regular": "400",
+      "medium": "500",
+      "semibold": "600",
+      "bold": "700",
+      "extrabold": "800",
+      "black": "900"
+    },
+    "colors": {
+      "gradients": {
+        "purple": ["#8B5CF6", "#6366F1", "#3B82F6"],
+        "blue": ["#3B82F6", "#0EA5E9", "#06B6D4"],
+        "green": ["#10B981", "#14B8A6", "#06B6D4"],
+        "lime": ["#84CC16", "#10B981", "#14B8A6"],
+        "sunset": ["#F59E0B", "#F97316", "#EF4444"],
+        "midnight": ["#1E293B", "#334155", "#475569"]
+      },
+      "primary": "#3B82F6",
+      "secondary": "#8B5CF6",
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444"
+    },
+    "shadows": {
+      "glow": {
+        "shadowColor": "#3B82F6",
+        "shadowOffset": { "width": 0, "height": 4 },
+        "shadowOpacity": 0.3,
+        "shadowRadius": 12,
+        "elevation": 6
+      }
+    },
+    "animation": {
+      "duration": {
+        "fast": 200,
+        "normal": 300,
+        "slow": 500
+      },
+      "spring": {
+        "damping": 15,
+        "stiffness": 150
+      }
+    }
+  },
+  "figmaSpecs": {
+    "autoLayout": {
+      "mainContainer": {
+        "direction": "vertical",
+        "spacing": 0,
+        "padding": { "top": 0, "right": 0, "bottom": 0, "left": 0 },
+        "fill": "gradient"
+      },
+      "progressHeader": {
+        "direction": "vertical",
+        "spacing": 8,
+        "padding": { "top": "safe-area-top + 16", "right": 24, "bottom": 16, "left": 24 }
+      },
+      "questionCard": {
+        "direction": "vertical",
+        "spacing": 24,
+        "padding": { "top": 24, "right": 24, "bottom": 24, "left": 24 },
+        "align": "center"
+      },
+      "glassCard": {
+        "direction": "vertical",
+        "spacing": 16,
+        "padding": { "top": 20, "right": 24, "bottom": 20, "left": 24 },
+        "cornerRadius": 24,
+        "fill": "blur + white 10% opacity",
+        "stroke": { "color": "white 20% opacity", "width": 1 }
+      },
+      "chipGrid": {
+        "direction": "horizontal",
+        "spacing": 12,
+        "wrap": true,
+        "align": "space-between"
+      },
+      "footer": {
+        "direction": "horizontal",
+        "spacing": 16,
+        "padding": { "top": 16, "right": 24, "bottom": "safe-area-bottom", "left": 24 }
+      }
+    }
+  },
+  "animationNotes": {
+    "transitions": [
+      {
+        "name": "Screen Transition",
+        "type": "SlideInRight + SlideOutLeft",
+        "duration": 300,
+        "easing": "ease-in-out",
+        "notes": "Smooth horizontal slide when moving between steps"
+      },
+      {
+        "name": "Button Press",
+        "type": "Scale",
+        "from": 1,
+        "to": 0.96,
+        "duration": 150,
+        "easing": "spring",
+        "notes": "Subtle scale down on press for tactile feedback"
+      },
+      {
+        "name": "Progress Bar",
+        "type": "Width Animation",
+        "duration": 300,
+        "easing": "spring",
+        "damping": 15,
+        "stiffness": 150,
+        "notes": "Smooth spring animation for progress updates"
+      },
+      {
+        "name": "Chip Entrance",
+        "type": "FadeInDown",
+        "duration": 300,
+        "stagger": 50,
+        "notes": "Staggered entrance for each chip option"
+      },
+      {
+        "name": "Card Entrance",
+        "type": "FadeIn",
+        "duration": 400,
+        "notes": "Fade in the entire question card"
+      }
+    ],
+    "microInteractions": [
+      "Haptic feedback on button press",
+      "Glow effect on primary button",
+      "Border highlight on selected chips",
+      "Smooth slider thumb movement"
+    ]
+  }
+}

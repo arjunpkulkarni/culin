@@ -1,0 +1,4 @@
+# Production runtime for Layer 3 (refine only). Install: pip install -r requirements-production.txt
+# Artifacts must be present at artifacts/ (or set path via refine(artifacts_dir=...)).
+numpy>=1.20
+joblib>=1.0

@@ -1,0 +1,13 @@
+{
+  "name": "mrepo-culinai",
+  "private": true,
+  "workspaces": [
+    "apps/culin-ai-app",
+    "servers/culin-backend"
+  ],
+  "scripts": {
+    "dev:app": "npm start --prefix apps/culin-ai-app",
+    "dev:web": "npm run dev --prefix servers/culin-backend",
+    "dev:nutrition": "cd servers/nutrition-estimation/nutrition_engine && python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+  }
+}

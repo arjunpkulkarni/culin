@@ -1,0 +1,33 @@
+version: 1.0
+runtime: python3
+
+# AWS App Runner configuration for source code deployment from GitHub.
+# App Runner will:
+#   1) Clone this repo
+#   2) Use the Source directory = `nutrition_engine`
+#   3) Run these build / run commands from that directory
+#
+# NOTE:
+# - Set DATABASE_URL, SECRET_KEY, LLM_* and CORS_ORIGINS in the App Runner
+#   service configuration (Console or CLI), not here.
+# - Ensure artifacts/ (layer1, layer2, layer3) exists in the repo or is
+#   created in CI before App Runner builds.
+
+build:
+  commands:
+    - pip install --no-cache-dir -r requirements.txt
+
+run:
+  command: >
+    gunicorn app.main:app
+    --workers ${NUTRITION_WORKERS:-2}
+    --worker-class uvicorn.workers.UvicornWorker
+    --bind 0.0.0.0:${PORT:-8000}
+    --timeout 120
+    --graceful-timeout 15
+    --access-logfile -
+    --capture-output
+  env:
+    - name: NUTRITION_ARTIFACTS
+      value: artifacts
+

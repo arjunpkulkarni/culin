@@ -1,0 +1,4 @@
+# Runtime dependencies for layer3/ (inference only; no training, no APIs)
+# Install in same venv as notebook: pip install -r requirements-notebook.txt
+# Or minimal: numpy only
+numpy>=1.20

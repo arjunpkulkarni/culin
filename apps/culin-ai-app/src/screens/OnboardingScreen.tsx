@@ -1,0 +1,457 @@
+import { useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  Pressable,
+  Text,
+} from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeIn, FadeOut, SlideInRight, SlideOutLeft } from 'react-native-reanimated';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { GradientBackground } from '@/src/components/onboarding/GradientBackground';
+import { ProgressHeader } from '@/src/components/onboarding/ProgressHeader';
+import { QuestionCard, TextInputCard, OptionButton } from '@/src/components/onboarding/QuestionCard';
+import { ChipSelector } from '@/src/components/onboarding/ChipSelector';
+import { SliderInput } from '@/src/components/onboarding/SliderInput';
+import { PrimaryButton } from '@/src/components/onboarding/PrimaryButton';
+import { spacing } from '@/src/design/tokens';
+import {
+  cmToFeetInches,
+  feetInchesToCm,
+  kgToPounds,
+  poundsToKg,
+} from '@/src/utils/unitConverters';
+
+// Onboarding configuration
+const TOTAL_STEPS = 6;
+
+const GOALS = [
+  { label: 'Lose Fat', value: 'lose_fat', icon: 'trending-down' },
+  { label: 'Build Muscle', value: 'build_muscle', icon: 'fitness-center' },
+  { label: 'Mental Health', value: 'mental_health', icon: 'psychology' },
+  { label: 'Better Sleep', value: 'sleep', icon: 'bedtime' },
+] as const;
+
+const MEDICAL_CONDITIONS = [
+  { label: 'Type 2 Diabetes', value: 'diabetes', icon: 'medical-services' },
+  { label: 'High BP', value: 'high_bp', icon: 'favorite' },
+  { label: 'Heart Disease', value: 'heart_disease', icon: 'favorite-border' },
+  { label: 'PCOS', value: 'pcos', icon: 'healing' },
+  { label: 'IBS', value: 'ibs', icon: 'sick' },
+  { label: 'Food Allergies', value: 'allergies', icon: 'warning' },
+] as const;
+
+const ACTIVITY_LEVELS = [
+  { label: 'Sedentary', value: 'sedentary', icon: 'event-seat' },
+  { label: 'Light Activity', value: 'light', icon: 'directions-walk' },
+  { label: 'Moderate', value: 'moderate', icon: 'directions-run' },
+  { label: 'Very Active', value: 'active', icon: 'fitness-center' },
+] as const;
+
+export default function OnboardingScreen() {
+  const { currentUser, updateUserData } = useAuth();
+  const insets = useSafeAreaInsets();
+  const [loading, setLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+
+  // Form state
+  const [name, setName] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [heightCm, setHeightCm] = useState('');
+  const [weightKg, setWeightKg] = useState('');
+  const [sex, setSex] = useState<'M' | 'F' | 'Other' | ''>('');
+  const [activityLevel, setActivityLevel] = useState('');
+  const [goals, setGoals] = useState<string[]>([]);
+  const [alcoholUse, setAlcoholUse] = useState(0);
+  const [medicalConditions, setMedicalConditions] = useState<string[]>([]);
+  const [additionalNotes, setAdditionalNotes] = useState('');
+
+  const getGradientForStep = (step: number) => {
+    const gradients = ['lightGreen', 'mint', 'clinical'] as const;
+    return gradients[(step - 1) % gradients.length];
+  };
+
+  const formatDateForDisplay = (dateString: string) => {
+    if (!dateString) return 'Select your date of birth';
+    const parsed = new Date(dateString);
+    if (Number.isNaN(parsed.getTime())) return 'Select your date of birth';
+    return parsed.toLocaleDateString();
+  };
+
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+
+    if (event.type === 'dismissed' || !selectedDate) return;
+
+    // Store as YYYY-MM-DD to keep transport and parsing stable.
+    const yyyy = selectedDate.getFullYear();
+    const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(selectedDate.getDate()).padStart(2, '0');
+    setDateOfBirth(`${yyyy}-${mm}-${dd}`);
+  };
+
+  const validateStep = (): boolean => {
+    switch (currentStep) {
+      case 1:
+        if (!name.trim()) {
+          Alert.alert('Required', 'Please enter your name');
+          return false;
+        }
+        return true;
+      case 2:
+        if (!dateOfBirth.trim()) {
+          Alert.alert('Required', 'Please enter your date of birth');
+          return false;
+        }
+        return true;
+      case 3:
+        if (!heightCm.trim() || isNaN(Number(heightCm)) || Number(heightCm) < 50 || Number(heightCm) > 250) {
+          Alert.alert('Invalid', 'Please enter a valid height (50-250 cm)');
+          return false;
+        }
+        if (!weightKg.trim() || isNaN(Number(weightKg)) || Number(weightKg) < 20 || Number(weightKg) > 300) {
+          Alert.alert('Invalid', 'Please enter a valid weight (20-300 kg)');
+          return false;
+        }
+        return true;
+      case 4:
+        if (!sex) {
+          Alert.alert('Required', 'Please select an option');
+          return false;
+        }
+        return true;
+      case 5:
+        if (goals.length === 0) {
+          Alert.alert('Required', 'Please select at least one goal');
+          return false;
+        }
+        return true;
+      case 6:
+        return true; // Optional step
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = () => {
+    if (!validateStep()) return;
+
+    if (currentStep < TOTAL_STEPS) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      handleComplete();
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleComplete = async () => {
+    setLoading(true);
+    console.log('📝 ========== ONBOARDING COMPLETION STARTED ==========');
+    
+    try {
+      // Calculate age from date of birth
+      const dob = new Date(dateOfBirth);
+      const today = new Date();
+      const age = today.getFullYear() - dob.getFullYear();
+
+      const userDataToSave: any = {
+        displayName: name,
+        dateOfBirth: dob.toISOString(),
+        height: Number(heightCm),
+        weight: Number(weightKg),
+        sex,
+        goals,
+        onboardingCompleted: true,
+      };
+
+      if (medicalConditions.length > 0) {
+        userDataToSave.healthConditions = medicalConditions;
+      }
+
+      console.log('📊 Onboarding data collected:', {
+        displayName: userDataToSave.displayName,
+        dateOfBirth: userDataToSave.dateOfBirth,
+        height: userDataToSave.height,
+        weight: userDataToSave.weight,
+        sex: userDataToSave.sex,
+        goals: userDataToSave.goals,
+        healthConditions: userDataToSave.healthConditions || [],
+        onboardingCompleted: true
+      });
+      
+      console.log('💾 Calling updateUserData to save and sync...');
+      await updateUserData(userDataToSave);
+      console.log('✅ Onboarding data saved successfully!');
+      console.log('========== ONBOARDING COMPLETION FINISHED ==========');
+
+      // With Cognito, user attributes are stored in userData (AsyncStorage)
+      // No need to update Cognito user attributes separately
+    } catch (error: any) {
+      console.error('❌ ========== ONBOARDING ERROR ==========');
+      console.error('Error:', error);
+      console.error('========================================');
+      Alert.alert('Error', error.message || 'Failed to save profile information');
+      setLoading(false);
+    }
+  };
+
+  const toggleGoal = (goal: string) => {
+    setGoals((prev) =>
+      prev.includes(goal) ? prev.filter((g) => g !== goal) : [...prev, goal]
+    );
+  };
+
+  const toggleCondition = (condition: string) => {
+    setMedicalConditions((prev) =>
+      prev.includes(condition) ? prev.filter((c) => c !== condition) : [...prev, condition]
+    );
+  };
+
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <QuestionCard
+            title="What's your name?"
+            subtitle="We'll use this to personalize your experience"
+            icon="waving-hand"
+          >
+            <TextInputCard
+              placeholder="Your name"
+              value={name}
+              onChangeText={setName}
+              icon="person"
+              autoCapitalize="words"
+            />
+          </QuestionCard>
+        );
+
+      case 2:
+        return (
+          <QuestionCard
+            title="When were you born?"
+            subtitle="Helps us calculate your nutritional needs"
+            icon="cake"
+          >
+            <Pressable style={styles.datePickerButton} onPress={() => setShowDatePicker(true)}>
+              <MaterialIcons name="calendar-today" size={20} color="#666" style={styles.datePickerIcon} />
+              <Text style={[styles.datePickerText, !dateOfBirth && styles.datePickerPlaceholder]}>
+                {formatDateForDisplay(dateOfBirth)}
+              </Text>
+            </Pressable>
+            {showDatePicker && (
+              <DateTimePicker
+                value={dateOfBirth ? new Date(dateOfBirth) : new Date(2000, 0, 1)}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                maximumDate={new Date()}
+                onChange={handleDateChange}
+              />
+            )}
+          </QuestionCard>
+        );
+
+      case 3:
+        return (
+          <QuestionCard
+            title="Height and weight?"
+            subtitle="Starting point for your journey"
+            icon="straighten"
+          >
+            <TextInputCard
+              placeholder="Height in cm"
+              value={heightCm}
+              onChangeText={setHeightCm}
+              keyboardType="number-pad"
+              icon="height"
+            />
+            <TextInputCard
+              placeholder="Weight in kg"
+              value={weightKg}
+              onChangeText={setWeightKg}
+              keyboardType="number-pad"
+              icon="monitor-weight"
+            />
+          </QuestionCard>
+        );
+
+      case 4:
+        return (
+          <QuestionCard
+            title="About you"
+            subtitle="Help us understand your profile"
+            icon="accessibility-new"
+          >
+            <View style={styles.optionsContainer}>
+              <OptionButton
+                label="Male"
+                selected={sex === 'M'}
+                onPress={() => setSex('M')}
+                icon="male"
+              />
+              <OptionButton
+                label="Female"
+                selected={sex === 'F'}
+                onPress={() => setSex('F')}
+                icon="female"
+              />
+              <OptionButton
+                label="Other"
+                selected={sex === 'Other'}
+                onPress={() => setSex('Other')}
+                icon="transgender"
+              />
+            </View>
+          </QuestionCard>
+        );
+
+      case 5:
+        return (
+          <QuestionCard
+            title="What are your goals?"
+            subtitle="Choose what matters most"
+            icon="emoji-events"
+          >
+            <ChipSelector
+              options={[...GOALS]}
+              selected={goals}
+              onSelect={toggleGoal}
+              multiple={true}
+              columns={2}
+            />
+          </QuestionCard>
+        );
+
+      case 6:
+        return (
+          <QuestionCard
+            title="Any health conditions?"
+            subtitle="Optional - helps us give safer advice"
+            icon="favorite"
+          >
+            <ChipSelector
+              options={[...MEDICAL_CONDITIONS]}
+              selected={medicalConditions}
+              onSelect={toggleCondition}
+              multiple={true}
+              columns={2}
+            />
+          </QuestionCard>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <GradientBackground type={getGradientForStep(currentStep)}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ProgressHeader currentStep={currentStep} totalSteps={TOTAL_STEPS} />
+
+        <Animated.View
+          key={currentStep}
+          entering={SlideInRight.duration(200)}
+          exiting={SlideOutLeft.duration(200)}
+          style={styles.content}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {renderStep()}
+          </ScrollView>
+        </Animated.View>
+
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+          {currentStep > 1 && (
+            <View style={styles.backButtonContainer}>
+              <PrimaryButton
+                label="Back"
+                onPress={handleBack}
+                variant="outline"
+                disabled={loading}
+              />
+            </View>
+          )}
+          <View style={styles.nextButtonContainer}>
+            <PrimaryButton
+              label={currentStep === TOTAL_STEPS ? 'Complete' : 'Continue'}
+              onPress={handleNext}
+              loading={loading}
+              icon={currentStep === TOTAL_STEPS ? 'check' : 'arrow-forward'}
+            />
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </GradientBackground>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: spacing.xxxl,
+  },
+  optionsContainer: {
+    width: '100%',
+    gap: spacing.sm,
+  },
+  datePickerButton: {
+    width: '100%',
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  datePickerIcon: {
+    marginRight: spacing.md,
+  },
+  datePickerText: {
+    fontSize: 16,
+    color: '#111827',
+  },
+  datePickerPlaceholder: {
+    color: '#9ca3af',
+  },
+  footer: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  backButtonContainer: {
+    flex: 1,
+  },
+  nextButtonContainer: {
+    flex: 2,
+  },
+});

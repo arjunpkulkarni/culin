@@ -1,0 +1,6 @@
+# For training the Layer 3 learned refinement model (scripts/train_refinement_model.py)
+# Install in same venv as notebook: pip install -r requirements-notebook.txt -r requirements-training.txt
+numpy>=1.20
+pandas>=1.3
+scikit-learn>=1.0
+joblib>=1.0

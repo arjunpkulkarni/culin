@@ -1,0 +1,188 @@
+{
+  "mealRecommender": {
+    "version": "2.0",
+    "decisionFlow": "cook_or_order",
+    "cookMeals": [
+      {
+        "id": "beef-rice",
+        "name": "Rice + 90/10 Ground Beef Bowl",
+        "emoji": "🍚",
+        "calories": 520,
+        "protein": 45,
+        "carbs": 55,
+        "fat": 12,
+        "prepTime": 15,
+        "cost": 3.5,
+        "difficulty": "Easy",
+        "tags": ["high-protein", "cheap", "meal-prep"],
+        "ingredients": [
+          "1 cup white rice",
+          "6oz 90/10 ground beef",
+          "Soy sauce",
+          "Garlic powder"
+        ]
+      },
+      {
+        "id": "eggs-toast",
+        "name": "Scrambled Eggs + Toast",
+        "emoji": "🍳",
+        "calories": 340,
+        "protein": 28,
+        "carbs": 30,
+        "fat": 12,
+        "prepTime": 8,
+        "cost": 2.0,
+        "difficulty": "Easy",
+        "tags": ["high-protein", "fast", "breakfast"],
+        "ingredients": [
+          "4 eggs",
+          "2 slices whole wheat toast",
+          "Butter"
+        ]
+      },
+      {
+        "id": "chicken-broccoli",
+        "name": "Chicken + Broccoli + Rice",
+        "emoji": "🍗",
+        "calories": 580,
+        "protein": 52,
+        "carbs": 62,
+        "fat": 10,
+        "prepTime": 20,
+        "cost": 4.5,
+        "difficulty": "Medium",
+        "tags": ["high-protein", "healthy"],
+        "ingredients": [
+          "6oz chicken breast",
+          "1 cup white rice",
+          "1.5 cups broccoli"
+        ]
+      },
+      {
+        "id": "yogurt-banana",
+        "name": "Oikos Yogurt + Banana",
+        "emoji": "🥛",
+        "calories": 180,
+        "protein": 20,
+        "carbs": 28,
+        "fat": 0,
+        "prepTime": 1,
+        "cost": 2.5,
+        "difficulty": "Instant",
+        "tags": ["high-protein", "fast", "cheap"],
+        "ingredients": [
+          "Oikos Triple Zero yogurt",
+          "1 medium banana"
+        ]
+      }
+    ],
+    "orderMeals": [
+      {
+        "id": "chipotle-double-chicken",
+        "name": "Chipotle Double Chicken Bowl",
+        "emoji": "🌯",
+        "restaurant": "Chipotle",
+        "calories": 680,
+        "protein": 72,
+        "carbs": 60,
+        "fat": 18,
+        "cost": 12.5,
+        "deliveryTime": 25,
+        "tags": ["high-protein"],
+        "orderDetails": {
+          "base": "Brown rice",
+          "protein": "Double chicken",
+          "toppings": ["Black beans", "Fajita veggies", "Mild salsa"]
+        }
+      },
+      {
+        "id": "subway-turkey",
+        "name": "Subway Turkey + Double Meat",
+        "emoji": "🥖",
+        "restaurant": "Subway",
+        "calories": 520,
+        "protein": 54,
+        "carbs": 48,
+        "fat": 14,
+        "cost": 9.5,
+        "deliveryTime": 20,
+        "tags": ["high-protein", "cheap"],
+        "orderDetails": {
+          "bread": "9-grain wheat",
+          "protein": "Turkey + double meat",
+          "toppings": ["Lettuce", "Tomato", "Cucumber"]
+        }
+      },
+      {
+        "id": "sweetgreen-protein",
+        "name": "Sweetgreen Protein Bowl",
+        "emoji": "🥗",
+        "restaurant": "Sweetgreen",
+        "calories": 450,
+        "protein": 42,
+        "carbs": 38,
+        "fat": 16,
+        "cost": 14.0,
+        "deliveryTime": 30,
+        "tags": ["high-protein", "healthy", "vegetarian"],
+        "orderDetails": {
+          "base": "Mixed greens",
+          "protein": "Grilled chicken",
+          "toppings": ["Quinoa", "Chickpeas", "Avocado"]
+        }
+      }
+    ],
+    "filterOptions": [
+      {
+        "id": "high-protein",
+        "label": "High protein",
+        "icon": "fitness-center",
+        "description": "30g+ protein per meal"
+      },
+      {
+        "id": "cheap",
+        "label": "Cheap",
+        "icon": "attach-money",
+        "description": "Under $5 per meal"
+      },
+      {
+        "id": "fast",
+        "label": "Fast",
+        "icon": "bolt",
+        "description": "Under 10 minutes"
+      },
+      {
+        "id": "vegetarian",
+        "label": "Vegetarian",
+        "icon": "eco",
+        "description": "No meat"
+      },
+      {
+        "id": "low-carb",
+        "label": "Low carb",
+        "icon": "trending-down",
+        "description": "Under 30g carbs"
+      }
+    ],
+    "userMacros": {
+      "daily": {
+        "calories": 2400,
+        "protein": 180,
+        "carbs": 240,
+        "fat": 80
+      },
+      "consumed": {
+        "calories": 1150,
+        "protein": 100,
+        "carbs": 130,
+        "fat": 35
+      },
+      "remaining": {
+        "calories": 1250,
+        "protein": 80,
+        "carbs": 110,
+        "fat": 45
+      }
+    }
+  }
+}

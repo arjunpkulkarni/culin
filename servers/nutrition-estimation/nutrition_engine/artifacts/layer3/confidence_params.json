@@ -1,0 +1,30 @@
+{
+  "similarity_to_confidence": {
+    "bin_edges": [
+      0.0,
+      0.3,
+      0.5,
+      0.7,
+      1.0
+    ],
+    "confidence_at_bin": [
+      0.3,
+      0.45,
+      0.6,
+      0.8,
+      1.0
+    ]
+  },
+  "ingredient_coverage_bins": [
+    0.0,
+    0.5,
+    0.75,
+    1.0
+  ],
+  "ingredient_coverage_penalty": [
+    0.5,
+    0.2,
+    0.05,
+    0.0
+  ]
+}

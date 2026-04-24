@@ -1,0 +1,57 @@
+# -----------------------------------------------------------------------------
+# Production deploy (e.g. AWS App Runner) needs: app/, layers/, artifacts/,
+# requirements.txt, Dockerfile. Only ignore dev/test/IDE/secrets below.
+# -----------------------------------------------------------------------------
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+ruff.toml
+
+# Environment & secrets (never commit)
+.env
+.env.*
+!.env.example
+
+# IDE / editor
+.idea/
+.vscode/
+.cursor/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dev / local only (not needed in production image)
+_layer1_repo/
+_layer2_repo/
+_layer3_repo/
+layers/layer1_clone/
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+layers/layer2/outputs/
+layers/layer2/runs/
+layers/layer3/outputs/
+layers/layer3/runs/
+
+# Test / dev scripts (not needed at runtime in production)
+test_accuracy.py
+
+# Production artifacts (artifacts/layer1/, artifacts/layer2/, artifacts/layer3/)
+# are NOT ignored — include them in the repo or build them in CI before
+# `docker build` so the image has Layer 1 lookup, Layer 2 model, Layer 3
+# embeddings for AWS App Runner.

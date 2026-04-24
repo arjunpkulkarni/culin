@@ -1,0 +1,8 @@
+# Ensure consistent line endings
+* text=auto eol=lf
+
+# Protect sensitive files
+.env linguist-vendored
+*.plist linguist-vendored
+google-services.json linguist-vendored
+

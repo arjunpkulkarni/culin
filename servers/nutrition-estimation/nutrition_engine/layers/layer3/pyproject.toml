@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "layer3-culinai"
+version = "0.1.0"
+description = "Layer 3: macro refinement using embeddings and similarity (L1/L2 → refine → refined_macros + confidence)"
+readme = "layer3/README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.20",
+    "joblib>=1.0",
+]
+
+[project.optional-dependencies]
+notebook = ["pandas>=1.3", "requests>=2.25", "python-dotenv>=1.0"]
+training = ["scikit-learn>=1.0", "pandas>=1.3"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["layer3"]

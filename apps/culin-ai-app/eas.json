@@ -1,0 +1,45 @@
+{
+  "cli": {
+    "version": ">= 16.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "production": {
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "testflight": {
+      "distribution": "store",
+      "ios": {
+        "buildConfiguration": "Release"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleTeamId": "533W5X82G7"
+      }
+    },
+    "testflight": {
+      "ios": {
+        "appleId": "arjunpkulkarni@gmail.com",
+        "ascAppId": "placeholder",
+        "appleTeamId": "placeholder"
+      }
+    }
+  }
+}

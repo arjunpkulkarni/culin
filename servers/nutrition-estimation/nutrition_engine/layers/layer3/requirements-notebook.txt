@@ -1,0 +1,13 @@
+# Dependencies for layer3_artifact_build.ipynb (offline artifact construction)
+#
+# Use a virtual environment (required on Homebrew Python / PEP 668):
+#   python3 -m venv .venv
+#   source .venv/bin/activate
+#   pip install -r requirements-notebook.txt
+#
+# Then in Cursor: choose the .venv interpreter (Cmd+Shift+P → "Python: Select Interpreter" → .venv).
+#
+numpy>=1.20
+pandas>=1.3
+requests>=2.25
+python-dotenv>=1.0
