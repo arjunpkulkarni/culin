@@ -10,7 +10,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, fontFamily, radius, shadows, spacing } from '@/src/design/tokens';
 
@@ -89,10 +88,6 @@ export function MealIdeaModal({
           style={styles.kav}
         >
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            {Platform.OS === 'ios' && (
-              <BlurView tint="light" intensity={70} style={StyleSheet.absoluteFill} />
-            )}
-            <View style={[StyleSheet.absoluteFill, styles.sheetFrost]} />
             <View style={styles.handle} />
 
             <View style={styles.header}>
@@ -195,17 +190,13 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   sheet: {
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    backgroundColor: colors.neutral.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
-    overflow: 'hidden',
-    backgroundColor: Platform.OS === 'android' ? 'rgba(255,255,255,0.95)' : 'transparent',
     ...shadows.floating,
-  },
-  sheetFrost: {
-    backgroundColor: 'rgba(255, 255, 255, 0.78)',
   },
   handle: {
     alignSelf: 'center',

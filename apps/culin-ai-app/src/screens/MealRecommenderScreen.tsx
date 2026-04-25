@@ -1,7 +1,6 @@
 import { useAuth } from '@/src/contexts/AuthContext';
 import { ActionChip, ActionChips } from '@/src/components/ActionChips';
 import { CalorieRing } from '@/src/components/CalorieRing';
-import { GlassCard } from '@/src/components/GlassCard';
 import { MacroProgressBar } from '@/src/components/MacroProgressBar';
 import { MealIdeaModal, type MealIdeaSubmit } from '@/src/components/MealIdeaModal';
 import { PrimaryActionBar, type PrimaryAction } from '@/src/components/PrimaryActionBar';
@@ -430,9 +429,11 @@ export default function MealRecommenderScreen() {
 
         {/* Daily Goals Card */}
         {nutritionGoals && (
-          <Animated.View entering={FadeInDown.duration(220).delay(40)}>
-            <GlassCard variant="hero" style={styles.goalsCard}>
-              <View style={styles.goalsTopRow}>
+          <Animated.View
+            entering={FadeInDown.duration(220).delay(40)}
+            style={styles.goalsCard}
+          >
+            <View style={styles.goalsTopRow}>
               <CalorieRing
                 consumed={dailyTotals.calories}
                 goal={nutritionGoals.calories}
@@ -470,7 +471,6 @@ export default function MealRecommenderScreen() {
                 />
               </View>
             </View>
-            </GlassCard>
           </Animated.View>
         )}
 
@@ -503,12 +503,8 @@ export default function MealRecommenderScreen() {
               {todaysMeals.map((meal) => {
                 const matchingRecipe = savedRecipes.find((r) => r.name === meal.foodName);
                 return (
-                  <GlassCard
-                    key={meal.id}
-                    variant="soft"
-                    style={styles.mealRowWrap}
-                  >
                   <Pressable
+                    key={meal.id}
                     style={styles.mealRow}
                     onPress={() => {
                       if (matchingRecipe) {
@@ -552,7 +548,6 @@ export default function MealRecommenderScreen() {
                       <MaterialIcons name="close" size={16} color={colors.neutral.gray600} />
                     </Pressable>
                   </Pressable>
-                  </GlassCard>
                 );
               })}
             </View>
@@ -591,14 +586,15 @@ export default function MealRecommenderScreen() {
 
         {/* Empty state when no meals + no recipes */}
         {todaysMeals.length === 0 && savedRecipes.length === 0 && (
-          <Animated.View entering={FadeInDown.duration(220).delay(120)}>
-            <GlassCard variant="hero" style={styles.emptyCard}>
-              <MaterialIcons name="restaurant-menu" size={36} color={colors.neutral.gray300} />
-              <Text style={styles.emptyTitle}>Start your day</Text>
-              <Text style={styles.emptySubtitle}>
-                Log your first meal or get an AI-picked idea tailored to your goals.
-              </Text>
-            </GlassCard>
+          <Animated.View
+            entering={FadeInDown.duration(220).delay(120)}
+            style={styles.emptyCard}
+          >
+            <MaterialIcons name="restaurant-menu" size={36} color={colors.neutral.gray300} />
+            <Text style={styles.emptyTitle}>Start your day</Text>
+            <Text style={styles.emptySubtitle}>
+              Log your first meal or get an AI-picked idea tailored to your goals.
+            </Text>
           </Animated.View>
         )}
       </ScrollView>
@@ -686,9 +682,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   goalsCard: {
+    backgroundColor: colors.neutral.white,
+    borderRadius: radius.cardLarge,
     paddingHorizontal: 20,
     paddingVertical: 24,
     marginBottom: 28,
+    ...shadows.hero,
   },
   goalsTopRow: {
     flexDirection: 'row',
@@ -770,17 +769,17 @@ const styles = StyleSheet.create({
     color: colors.primary[700],
   },
   mealsList: {
-    gap: 10,
-  },
-  mealRowWrap: {
-    // GlassCard wrapper; padding lives on the inner Pressable.
+    gap: 8,
   },
   mealRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: colors.neutral.white,
+    borderRadius: radius.card,
     paddingHorizontal: 16,
     paddingVertical: 16,
     gap: 14,
+    ...shadows.soft,
   },
   mealAvatar: {
     width: 42,
@@ -821,11 +820,14 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   emptyCard: {
+    backgroundColor: colors.neutral.white,
+    borderRadius: radius.cardLarge,
     paddingHorizontal: 24,
     paddingVertical: 40,
     alignItems: 'center',
     gap: 10,
     marginBottom: 32,
+    ...shadows.card,
   },
   emptyTitle: {
     fontFamily: fontFamily.primaryMedium,

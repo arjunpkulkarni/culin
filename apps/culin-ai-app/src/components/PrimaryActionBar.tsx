@@ -1,6 +1,5 @@
 import React from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -75,7 +74,6 @@ function PrimaryButton({ action, expanded }: { action: PrimaryAction; expanded: 
 }
 
 function SecondaryButton({ action }: { action: PrimaryAction }) {
-  const isAndroidFallback = Platform.OS === 'android';
   return (
     <Pressable
       onPress={action.onPress}
@@ -83,25 +81,15 @@ function SecondaryButton({ action }: { action: PrimaryAction }) {
       style={({ pressed }) => [
         styles.btnBase,
         styles.btnHalf,
+        styles.btnSecondary,
         pressed && styles.btnPressed,
         action.disabled && styles.btnDisabled,
       ]}
     >
-      <View style={styles.btnClip}>
-        {isAndroidFallback ? (
-          <View style={[StyleSheet.absoluteFill, styles.btnSecondaryAndroid]} />
-        ) : (
-          <BlurView tint="light" intensity={55} style={StyleSheet.absoluteFill} />
-        )}
-        <View style={[StyleSheet.absoluteFill, styles.btnSecondaryFrost]} />
-        <View pointerEvents="none" style={styles.btnHighlight} />
-        <View style={styles.btnContent}>
-          <MaterialIcons name={action.icon} size={20} color={colors.neutral.blackSoft} />
-          <Text style={styles.secondaryText} numberOfLines={1}>
-            {action.label}
-          </Text>
-        </View>
-      </View>
+      <MaterialIcons name={action.icon} size={20} color={colors.neutral.blackSoft} />
+      <Text style={styles.secondaryText} numberOfLines={1}>
+        {action.label}
+      </Text>
     </Pressable>
   );
 }
@@ -135,29 +123,10 @@ const styles = StyleSheet.create({
   btnHalf: {
     flex: 1,
   },
-  btnClip: {
-    flex: 1,
-    borderRadius: radius.button,
-    overflow: 'hidden',
-  },
-  btnSecondaryAndroid: {
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-  },
-  btnSecondaryFrost: {
-    backgroundColor: 'rgba(255, 255, 255, 0.55)',
-  },
-  btnHighlight: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: radius.button,
+  btnSecondary: {
+    backgroundColor: colors.neutral.white,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.65)',
-  },
-  btnContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    borderColor: colors.neutral.gray100,
   },
   btnPressed: {
     opacity: 0.85,
