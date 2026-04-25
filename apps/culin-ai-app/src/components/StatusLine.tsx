@@ -44,8 +44,8 @@ function pickStatus(goals: NutritionGoals, totals: DailyTotals): StatusContent {
   if (totals.mealCount === 0) {
     return {
       prefix: '',
-      highlight: 'Start your day',
-      suffix: ` — ${calLeft} cal to go.`,
+      highlight: 'Start your day.',
+      suffix: ` ${calLeft} cal to go.`,
     };
   }
 
@@ -55,7 +55,7 @@ function pickStatus(goals: NutritionGoals, totals: DailyTotals): StatusContent {
     return {
       prefix: "You're ",
       highlight: 'on track',
-      suffix: ` — nice work.`,
+      suffix: '. Nice work.',
     };
   }
 
@@ -67,7 +67,7 @@ function pickStatus(goals: NutritionGoals, totals: DailyTotals): StatusContent {
     return {
       prefix: "You're ",
       highlight: `low on ${weakest.macro}`,
-      suffix: ` — ${weakest.left}g ${weakest.macro} left, ${calLeft} cal to go.`,
+      suffix: `. ${weakest.left}g ${weakest.macro} left, ${calLeft} cal to go.`,
     };
   }
 

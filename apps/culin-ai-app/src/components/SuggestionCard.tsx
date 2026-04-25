@@ -8,11 +8,12 @@ export type SuggestionBadge = 'HIGH PROTEIN' | 'BALANCED' | 'LOW CAL' | 'QUICK' 
 export interface Suggestion {
   id: string;
   name: string;
-  emoji: string;
   badge?: SuggestionBadge;
   protein: number;
   calories: number;
   prepTime?: number;
+  /** Optional override for the leading icon. Defaults to icon derived from badge. */
+  icon?: keyof typeof MaterialIcons.glyphMap;
 }
 
 interface Props {
@@ -22,11 +23,13 @@ interface Props {
 }
 
 export function SuggestionCard({ suggestion, onLog, onCook }: Props) {
+  const iconName = suggestion.icon ?? iconForBadge(suggestion.badge);
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.iconCircle}>
-          <Text style={styles.emoji}>{suggestion.emoji}</Text>
+          <MaterialIcons name={iconName} size={18} color={colors.primary[700]} />
         </View>
         {suggestion.badge && (
           <View style={[styles.badge, badgeStyleFor(suggestion.badge)]}>
@@ -94,6 +97,22 @@ function badgeStyleFor(badge: SuggestionBadge) {
   }
 }
 
+function iconForBadge(badge?: SuggestionBadge): keyof typeof MaterialIcons.glyphMap {
+  switch (badge) {
+    case 'HIGH PROTEIN':
+      return 'fitness-center';
+    case 'BALANCED':
+      return 'balance';
+    case 'LOW CAL':
+      return 'eco';
+    case 'QUICK':
+      return 'bolt';
+    case 'AI PICK':
+    default:
+      return 'restaurant';
+  }
+}
+
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.neutral.white,
@@ -112,12 +131,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.neutral.offWhite,
+    backgroundColor: colors.primary.soft,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  emoji: {
-    fontSize: 18,
   },
   badge: {
     paddingHorizontal: 8,

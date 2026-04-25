@@ -4,6 +4,7 @@ import { CalorieRing } from '@/src/components/CalorieRing';
 import { MacroProgressBar } from '@/src/components/MacroProgressBar';
 import { MealIdeaModal, type MealIdeaSubmit } from '@/src/components/MealIdeaModal';
 import { PrimaryActionBar, type PrimaryAction } from '@/src/components/PrimaryActionBar';
+import { ProfileButton } from '@/src/components/ProfileButton';
 import { QuickLogModal } from '@/src/components/QuickLogModal';
 import { StatusLine } from '@/src/components/StatusLine';
 import { Suggestion, SuggestionCard } from '@/src/components/SuggestionCard';
@@ -310,7 +311,6 @@ export default function MealRecommenderScreen() {
     return scored.slice(0, 6).map(({ recipe }) => ({
       id: recipe.id ?? recipe.name,
       name: recipe.name,
-      emoji: recipe.emoji || '🍽️',
       protein: Math.round(recipe.protein),
       calories: Math.round(recipe.calories),
       prepTime: recipe.prepTime,
@@ -410,12 +410,18 @@ export default function MealRecommenderScreen() {
       >
         {/* Greeting */}
         <Animated.View entering={FadeIn.duration(200)} style={styles.header}>
-          <Text style={styles.dayTime}>{formatDayAndTime()}</Text>
-          <Pressable onPress={() => router.push('/(tabs)/profile' as any)} hitSlop={8}>
-            <Text style={styles.greeting}>
-              {greeting}, {userName}
-            </Text>
-          </Pressable>
+          <View style={styles.headerTop}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.dayTime}>{formatDayAndTime()}</Text>
+              <Text style={styles.greeting}>
+                {greeting}, {userName}
+              </Text>
+            </View>
+            <ProfileButton
+              name={userName}
+              onPress={() => router.push('/(tabs)/profile' as any)}
+            />
+          </View>
           <StatusLine goals={nutritionGoals} totals={dailyTotals} />
         </Animated.View>
 
@@ -509,9 +515,11 @@ export default function MealRecommenderScreen() {
                     }}
                   >
                     <View style={styles.mealAvatar}>
-                      <Text style={styles.mealAvatarEmoji}>
-                        {matchingRecipe?.emoji || mealEmojiFor(meal.mealType)}
-                      </Text>
+                      <MaterialIcons
+                        name={mealIconFor(meal.mealType)}
+                        size={18}
+                        color={colors.primary[700]}
+                      />
                     </View>
                     <View style={styles.mealCenter}>
                       <Text style={styles.mealName} numberOfLines={1}>
@@ -604,18 +612,18 @@ export default function MealRecommenderScreen() {
   );
 }
 
-function mealEmojiFor(mealType: MealEntry['mealType']) {
+function mealIconFor(mealType: MealEntry['mealType']): keyof typeof MaterialIcons.glyphMap {
   switch (mealType) {
     case 'Breakfast':
-      return '🍳';
+      return 'free-breakfast';
     case 'Lunch':
-      return '🥗';
+      return 'lunch-dining';
     case 'Dinner':
-      return '🍽️';
+      return 'dinner-dining';
     case 'Snack':
-      return '🍎';
+      return 'cookie';
     default:
-      return '🍽️';
+      return 'restaurant';
   }
 }
 
@@ -631,16 +639,24 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 16,
   },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  headerLeft: {
+    flex: 1,
+  },
   dayTime: {
     fontFamily: fontFamily.primary,
-    fontSize: 13,
+    fontSize: 12,
     color: colors.neutral.gray600,
-    marginBottom: 6,
+    marginBottom: 2,
   },
   greeting: {
-    fontFamily: fontFamily.primary,
-    fontSize: 28,
-    fontWeight: '300',
+    fontFamily: fontFamily.primaryMedium,
+    fontSize: 20,
     color: colors.neutral.blackSoft,
   },
   goalsCard: {
@@ -739,12 +755,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.neutral.offWhite,
+    backgroundColor: colors.primary.soft,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  mealAvatarEmoji: {
-    fontSize: 18,
   },
   mealCenter: {
     flex: 1,
