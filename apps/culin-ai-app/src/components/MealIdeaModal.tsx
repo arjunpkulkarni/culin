@@ -11,7 +11,6 @@ import {
   View,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import Slider from '@react-native-community/slider';
 import { colors, fontFamily, radius, shadows, spacing } from '@/src/design/tokens';
 
 const FILTER_CHIPS = [
@@ -23,7 +22,6 @@ const FILTER_CHIPS = [
 ] as const;
 
 export interface MealIdeaSubmit {
-  mode: 'cook' | 'order';
   prompt: string;
   filters: string[];
   complexity: number;
@@ -61,8 +59,8 @@ export function MealIdeaModal({
     setFilters((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
   };
 
-  const handleSubmit = (mode: 'cook' | 'order') => {
-    onSubmit({ mode, prompt: prompt.trim(), filters, complexity });
+  const handleSubmit = () => {
+    onSubmit({ prompt: prompt.trim(), filters, complexity });
   };
 
   return (
@@ -128,45 +126,41 @@ export function MealIdeaModal({
                 })}
               </ScrollView>
 
-              <View style={styles.complexitySection}>
-                <View style={styles.complexityHeader}>
-                  <MaterialIcons name="tune" size={16} color={colors.primary[600]} />
-                  <Text style={styles.complexityLabel}>Recipe complexity: {complexity}</Text>
-                </View>
-                <Slider
-                  style={styles.slider}
-                  minimumValue={1}
-                  maximumValue={5}
-                  step={1}
-                  value={complexity}
-                  onValueChange={setComplexity}
-                  minimumTrackTintColor={colors.primary[600]}
-                  maximumTrackTintColor={colors.neutral.gray100}
-                  thumbTintColor={colors.primary[600]}
-                />
-                <View style={styles.sliderLabels}>
-                  <Text style={styles.sliderLabelText}>Simple</Text>
-                  <Text style={styles.sliderLabelText}>Complex</Text>
-                </View>
+              <Text style={styles.label}>Complexity</Text>
+              <View style={styles.complexityRow}>
+                {[1, 2, 3, 4, 5].map((n) => {
+                  const active = n === complexity;
+                  return (
+                    <Pressable
+                      key={n}
+                      onPress={() => setComplexity(n)}
+                      style={[styles.complexityCell, active && styles.complexityCellActive]}
+                    >
+                      <Text
+                        style={[
+                          styles.complexityCellText,
+                          active && styles.complexityCellTextActive,
+                        ]}
+                      >
+                        {n}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <View style={styles.complexityCaption}>
+                <Text style={styles.captionText}>Simple</Text>
+                <Text style={styles.captionText}>Complex</Text>
               </View>
             </ScrollView>
 
-            <View style={styles.actionRow}>
-              <Pressable
-                style={[styles.actionBtn, styles.actionSecondary]}
-                onPress={() => handleSubmit('order')}
-              >
-                <MaterialIcons name="delivery-dining" size={18} color={colors.neutral.blackSoft} />
-                <Text style={[styles.actionText, styles.actionTextSecondary]}>Order</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.actionBtn, styles.actionPrimary]}
-                onPress={() => handleSubmit('cook')}
-              >
-                <MaterialIcons name="restaurant" size={18} color={colors.neutral.white} />
-                <Text style={[styles.actionText, styles.actionTextPrimary]}>Cook</Text>
-              </Pressable>
-            </View>
+            <Pressable
+              style={[styles.actionBtn, styles.actionPrimary]}
+              onPress={handleSubmit}
+            >
+              <MaterialIcons name="restaurant" size={18} color={colors.neutral.white} />
+              <Text style={[styles.actionText, styles.actionTextPrimary]}>Find a recipe</Text>
+            </Pressable>
           </Pressable>
         </KeyboardAvoidingView>
       </Pressable>
@@ -189,7 +183,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.xl,
     maxHeight: '85%',
     ...shadows.floating,
   },
@@ -265,55 +259,53 @@ const styles = StyleSheet.create({
     color: colors.primary[700],
     fontFamily: fontFamily.primaryMedium,
   },
-  complexitySection: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  complexityHeader: {
+  complexityRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 6,
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  complexityLabel: {
+  complexityCell: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: radius.button,
+    backgroundColor: colors.neutral.offWhite,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  complexityCellActive: {
+    backgroundColor: colors.primary.soft,
+    borderWidth: 1,
+    borderColor: colors.primary[600],
+  },
+  complexityCellText: {
     fontFamily: fontFamily.primaryMedium,
-    fontSize: 13,
-    color: colors.neutral.blackSoft,
+    fontSize: 14,
+    color: colors.neutral.gray600,
   },
-  slider: {
-    width: '100%',
-    height: 36,
+  complexityCellTextActive: {
+    color: colors.primary[700],
   },
-  sliderLabels: {
+  complexityCaption: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: spacing.md,
   },
-  sliderLabelText: {
+  captionText: {
     fontFamily: fontFamily.primary,
     fontSize: 11,
     color: colors.neutral.gray300,
   },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: spacing.lg,
-  },
   actionBtn: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 14,
     borderRadius: radius.button,
+    marginTop: spacing.md,
   },
   actionPrimary: {
     backgroundColor: colors.primary[600],
-  },
-  actionSecondary: {
-    backgroundColor: colors.neutral.offWhite,
-    borderWidth: 1,
-    borderColor: colors.neutral.gray100,
   },
   actionText: {
     fontFamily: fontFamily.primaryMedium,
@@ -321,8 +313,5 @@ const styles = StyleSheet.create({
   },
   actionTextPrimary: {
     color: colors.neutral.white,
-  },
-  actionTextSecondary: {
-    color: colors.neutral.blackSoft,
   },
 });

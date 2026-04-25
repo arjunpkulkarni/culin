@@ -243,7 +243,7 @@ export default function MealRecommenderScreen() {
     router.push({
       pathname: '/meal-results' as any,
       params: {
-        mode: params.mode,
+        mode: 'cook',
         prompt: params.prompt,
         filters: JSON.stringify(params.filters),
         complexity: params.complexity.toString(),
