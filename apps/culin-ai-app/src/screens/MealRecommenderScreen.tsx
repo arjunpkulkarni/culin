@@ -398,11 +398,13 @@ export default function MealRecommenderScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#F2FFF2', '#E8FBE3', '#CFF7D6']}
+        colors={['#FBFFFA', '#F2FBEE', '#E5F6E0']}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
+      {/* Soft radial bloom near the top for cinematic depth */}
+      <View pointerEvents="none" style={styles.bloomTop} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -636,44 +638,60 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  bloomTop: {
+    position: 'absolute',
+    top: -80,
+    left: -60,
+    width: 360,
+    height: 360,
+    borderRadius: 180,
+    backgroundColor: 'rgba(207, 247, 214, 0.55)',
+    opacity: 0.9,
+  },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 80,
-    paddingBottom: 140,
+    paddingTop: 96,
+    paddingBottom: 160,
   },
   header: {
-    marginBottom: 16,
+    marginBottom: 28,
   },
   headerTop: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 12,
+    marginBottom: 4,
   },
   headerLeft: {
     flex: 1,
+    paddingTop: 2,
   },
   dayTime: {
     fontFamily: fontFamily.primary,
     fontSize: 12,
     color: colors.neutral.gray600,
-    marginBottom: 2,
+    marginBottom: 4,
+    letterSpacing: 0.2,
   },
   greeting: {
-    fontFamily: fontFamily.primaryMedium,
-    fontSize: 20,
+    fontFamily: fontFamily.primaryLight,
+    fontSize: 26,
+    fontWeight: '300',
     color: colors.neutral.blackSoft,
+    letterSpacing: -0.5,
   },
   goalsCard: {
     backgroundColor: colors.neutral.white,
-    borderRadius: radius.card,
-    padding: 16,
-    marginBottom: 16,
-    ...shadows.card,
+    borderRadius: radius.cardLarge,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    marginBottom: 28,
+    ...shadows.hero,
   },
   goalsTopRow: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 22,
     alignItems: 'center',
   },
   goalsRight: {
@@ -683,17 +701,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   goalsTitle: {
     fontFamily: fontFamily.primaryMedium,
     fontSize: 15,
     color: colors.neutral.blackSoft,
+    letterSpacing: -0.1,
   },
   goalsTotal: {
     fontFamily: fontFamily.primary,
-    fontSize: 12,
+    fontSize: 11,
     color: colors.neutral.gray300,
+    letterSpacing: 0.2,
   },
   goalsTotalOver: {
     color: colors.semantic.warning,
@@ -704,8 +724,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 16,
-    marginBottom: 16,
+    paddingVertical: 24,
+    marginBottom: 24,
   },
   loadingText: {
     fontFamily: fontFamily.primary,
@@ -713,32 +733,35 @@ const styles = StyleSheet.create({
     color: colors.neutral.gray600,
   },
   chipsWrapper: {
-    marginBottom: 24,
+    marginBottom: 32,
+    marginHorizontal: -4,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 32,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   sectionTitle: {
     fontFamily: fontFamily.primaryMedium,
-    fontSize: 18,
+    fontSize: 19,
     color: colors.neutral.blackSoft,
+    letterSpacing: -0.3,
   },
   sectionMeta: {
     fontFamily: fontFamily.primary,
     fontSize: 12,
     color: colors.neutral.gray300,
+    letterSpacing: 0.2,
   },
   sectionSubtitle: {
     fontFamily: fontFamily.primary,
     fontSize: 13,
     color: colors.neutral.gray600,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   sectionLink: {
     fontFamily: fontFamily.primaryMedium,
@@ -746,24 +769,22 @@ const styles = StyleSheet.create({
     color: colors.primary[700],
   },
   mealsList: {
-    backgroundColor: colors.neutral.white,
-    borderRadius: radius.card,
-    overflow: 'hidden',
-    ...shadows.card,
+    gap: 8,
   },
   mealRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.neutral.gray100,
+    backgroundColor: colors.neutral.white,
+    borderRadius: radius.card,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 14,
+    ...shadows.soft,
   },
   mealAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: colors.primary.soft,
     alignItems: 'center',
     justifyContent: 'center',
@@ -775,45 +796,52 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.primaryMedium,
     fontSize: 15,
     color: colors.neutral.blackSoft,
-    marginBottom: 2,
+    marginBottom: 3,
+    letterSpacing: -0.1,
   },
   mealStats: {
     fontFamily: fontFamily.primary,
     fontSize: 12,
     color: colors.neutral.gray600,
+    letterSpacing: 0.1,
   },
   removeBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.neutral.offWhite,
   },
   suggestionsRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 14,
     paddingVertical: 4,
-    paddingRight: 4,
+    paddingRight: 8,
   },
   emptyCard: {
     backgroundColor: colors.neutral.white,
-    borderRadius: radius.card,
-    padding: 32,
+    borderRadius: radius.cardLarge,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 24,
+    gap: 10,
+    marginBottom: 32,
     ...shadows.card,
   },
   emptyTitle: {
     fontFamily: fontFamily.primaryMedium,
-    fontSize: 17,
+    fontSize: 18,
     color: colors.neutral.blackSoft,
-    marginTop: 4,
+    marginTop: 6,
+    letterSpacing: -0.2,
   },
   emptySubtitle: {
     fontFamily: fontFamily.primary,
     fontSize: 13,
     color: colors.neutral.gray600,
     textAlign: 'center',
+    lineHeight: 19,
+    maxWidth: 260,
   },
 });

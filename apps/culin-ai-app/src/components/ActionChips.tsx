@@ -54,24 +54,28 @@ export function ActionChips({ chips }: Props) {
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingVertical: spacing.xs,
+    paddingRight: spacing.xl,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
     borderRadius: radius.full,
   },
   chipPrimary: {
     backgroundColor: colors.primary[600],
+    shadowColor: colors.primary[600],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 3,
   },
   chipSecondary: {
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.gray100,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
   },
   chipDisabled: {
     opacity: 0.5,
@@ -79,6 +83,7 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: fontFamily.primaryMedium,
     fontSize: 14,
+    letterSpacing: -0.1,
   },
   labelPrimary: {
     color: colors.neutral.white,

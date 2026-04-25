@@ -117,14 +117,14 @@ export function StatusLine({ goals, totals }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 4,
-    marginBottom: 16,
+    marginTop: 8,
   },
   text: {
     fontFamily: fontFamily.primary,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 21,
     color: colors.neutral.gray600,
+    letterSpacing: -0.1,
   },
   highlight: {
     fontFamily: fontFamily.primaryMedium,

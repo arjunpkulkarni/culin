@@ -49,22 +49,24 @@ export function MacroProgressBar({
 
 const styles = StyleSheet.create({
   row: {
-    marginBottom: 12,
+    marginBottom: 14,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    marginBottom: 6,
+    marginBottom: 7,
   },
   label: {
     fontFamily: fontFamily.primary,
-    fontSize: 14,
+    fontSize: 13,
     color: colors.neutral.gray600,
+    letterSpacing: 0.1,
   },
   value: {
     fontFamily: fontFamily.primary,
-    fontSize: 14,
+    fontSize: 13,
+    letterSpacing: 0.1,
   },
   consumed: {
     fontFamily: fontFamily.primaryMedium,
@@ -80,9 +82,9 @@ const styles = StyleSheet.create({
     color: colors.neutral.gray300,
   },
   track: {
-    height: 6,
+    height: 5,
     borderRadius: 3,
-    backgroundColor: colors.neutral.gray100,
+    backgroundColor: 'rgba(229, 234, 231, 0.7)',
     overflow: 'hidden',
   },
   fill: {

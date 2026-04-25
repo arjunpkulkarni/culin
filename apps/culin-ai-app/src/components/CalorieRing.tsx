@@ -15,7 +15,7 @@ interface Props {
  *
  * No external SVG dependency — uses View clipping + transform: rotate.
  */
-export function CalorieRing({ consumed, goal, size = 90, thickness = 8 }: Props) {
+export function CalorieRing({ consumed, goal, size = 110, thickness = 7 }: Props) {
   const safeGoal = Math.max(1, goal);
   const isOver = consumed > safeGoal;
   // When over, show full ring at warning color and big-number = overage.
@@ -169,10 +169,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bigNumber: {
-    fontFamily: fontFamily.primaryMedium,
-    fontSize: 22,
+    fontFamily: fontFamily.primaryLight,
+    fontSize: 28,
+    fontWeight: '300',
     color: colors.neutral.blackSoft,
-    lineHeight: 26,
+    lineHeight: 32,
+    letterSpacing: -0.5,
   },
   bigNumberOver: {
     color: colors.semantic.warning,
@@ -180,9 +182,9 @@ const styles = StyleSheet.create({
   caption: {
     fontFamily: fontFamily.primary,
     fontSize: 9,
-    letterSpacing: 1.2,
+    letterSpacing: 1.4,
     color: colors.neutral.gray300,
-    marginTop: 2,
+    marginTop: 4,
   },
   captionOver: {
     color: colors.semantic.warning,

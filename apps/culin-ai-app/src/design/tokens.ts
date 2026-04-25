@@ -20,8 +20,9 @@ export const spacing = {
 
 export const radius = {
   chip: 16,
-  button: 20,
-  card: 24,
+  button: 22,
+  card: 28,
+  cardLarge: 32,
   full: 9999,
 } as const;
 
@@ -93,26 +94,45 @@ export const colors = {
 };
 
 export const shadows = {
-  card: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 4,
-  },
-  button: {
-    shadowColor: '#63C63F',
+  // Subtle: tiny lift, used on chips and small surfaces.
+  soft: {
+    shadowColor: '#0A1F0F',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
     elevation: 2,
   },
-  floating: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
+  // Standard card lift — softer than before so cards feel calmer.
+  card: {
+    shadowColor: '#0A1F0F',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
     shadowRadius: 24,
-    elevation: 6,
+    elevation: 4,
+  },
+  // Hero card lift — used on the daily goals card / dominant surfaces.
+  hero: {
+    shadowColor: '#0A1F0F',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 32,
+    elevation: 8,
+  },
+  // Brand-tinted button shadow.
+  button: {
+    shadowColor: '#63C63F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  // Floating bottom-action / sticky bar.
+  floating: {
+    shadowColor: '#0A1F0F',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 28,
+    elevation: 8,
   },
 } as const;
 
