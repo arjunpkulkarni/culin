@@ -419,14 +419,29 @@ export default function ProfileScreen() {
         </View>
 
         {/* Bottom actions */}
-        <View style={styles.actions}>
-          <Pressable style={styles.signOutBtn} onPress={handleSignOut}>
-            <MaterialIcons name="logout" size={18} color={colors.neutral.blackSoft} />
+        <View style={styles.actionsCard}>
+          <Pressable style={styles.signOutRow} onPress={handleSignOut}>
+            <MaterialIcons name="logout" size={20} color={colors.neutral.blackSoft} />
             <Text style={styles.signOutText}>Sign out</Text>
+            <MaterialIcons
+              name="chevron-right"
+              size={20}
+              color={colors.neutral.gray300}
+              style={styles.actionChevron}
+            />
           </Pressable>
 
-          <Pressable style={styles.deleteBtn} onPress={handleDeleteAccount} hitSlop={6}>
+          <View style={styles.actionDivider} />
+
+          <Pressable style={styles.signOutRow} onPress={handleDeleteAccount}>
+            <MaterialIcons name="delete-outline" size={20} color={colors.semantic.error} />
             <Text style={styles.deleteText}>Delete account</Text>
+            <MaterialIcons
+              name="chevron-right"
+              size={20}
+              color={colors.neutral.gray300}
+              style={styles.actionChevron}
+            />
           </Pressable>
         </View>
 
@@ -725,37 +740,37 @@ const styles = StyleSheet.create({
   },
 
   // Actions
-  actions: {
+  actionsCard: {
+    backgroundColor: colors.neutral.white,
+    borderRadius: radius.card,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
     paddingHorizontal: spacing.lg,
-    marginTop: spacing.xl,
-    gap: spacing.md,
-    alignItems: 'center',
+    overflow: 'hidden',
+    ...shadows.card,
   },
-  signOutBtn: {
+  signOutRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    width: '100%',
-    paddingVertical: 14,
-    borderRadius: radius.button,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.gray100,
+    gap: spacing.md,
+    paddingVertical: 16,
+  },
+  actionDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.neutral.gray100,
+    marginLeft: 36, // align with text after icon
+  },
+  actionChevron: {
+    marginLeft: 'auto',
   },
   signOutText: {
     fontFamily: fontFamily.primaryMedium,
     fontSize: 15,
     color: colors.neutral.blackSoft,
   },
-  deleteBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
   deleteText: {
-    fontFamily: fontFamily.primary,
-    fontSize: 13,
+    fontFamily: fontFamily.primaryMedium,
+    fontSize: 15,
     color: colors.semantic.error,
-    textDecorationLine: 'underline',
   },
 });
