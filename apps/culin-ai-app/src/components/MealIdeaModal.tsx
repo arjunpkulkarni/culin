@@ -63,6 +63,23 @@ export function MealIdeaModal({
     onSubmit({ prompt: prompt.trim(), filters, complexity });
   };
 
+  const complexityLabel = (n: number) => {
+    switch (n) {
+      case 1:
+        return 'Beginner';
+      case 2:
+        return 'Easy';
+      case 3:
+        return 'Medium';
+      case 4:
+        return 'Advanced';
+      case 5:
+        return 'Chef';
+      default:
+        return '';
+    }
+  };
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
@@ -123,6 +140,10 @@ export function MealIdeaModal({
               })}
             </ScrollView>
 
+            <View style={styles.complexityHeader}>
+              <Text style={styles.complexityLabel}>Recipe complexity</Text>
+              <Text style={styles.complexityValue}>{complexityLabel(complexity)}</Text>
+            </View>
             <View style={styles.complexityRow}>
               {[1, 2, 3, 4, 5].map((n) => {
                 const active = n === complexity;
@@ -242,10 +263,26 @@ const styles = StyleSheet.create({
     color: colors.primary[700],
     fontFamily: fontFamily.primaryMedium,
   },
+  complexityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginTop: spacing.md,
+    marginBottom: 6,
+  },
+  complexityLabel: {
+    fontFamily: fontFamily.primaryMedium,
+    fontSize: 13,
+    color: colors.neutral.gray600,
+  },
+  complexityValue: {
+    fontFamily: fontFamily.primaryMedium,
+    fontSize: 13,
+    color: colors.primary[700],
+  },
   complexityRow: {
     flexDirection: 'row',
     gap: 6,
-    marginTop: spacing.md,
     marginBottom: spacing.sm,
   },
   complexityCell: {
