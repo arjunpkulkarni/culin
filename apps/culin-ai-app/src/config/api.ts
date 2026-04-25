@@ -1,10 +1,10 @@
 /**
- * AWS App Runner backend:
+ * DigitalOcean backend:
  * - Nutrition estimation engine (POST /estimate, POST /estimate-from-text)
  * - FatSecret proxy (GET /food/search, POST /food/log, etc.)
  */
 export const NUTRITION_API_BASE_URL =
-  process.env.EXPO_PUBLIC_NUTRITION_API_URL || 'https://vxxxsgeazd.us-east-2.awsapprunner.com';
+  process.env.EXPO_PUBLIC_NUTRITION_API_URL || 'https://api.nutrition-engine.culin.ai';
 
 export const FATSECRET_API_BASE_URL =
   process.env.EXPO_PUBLIC_FATSECRET_API_URL || NUTRITION_API_BASE_URL;

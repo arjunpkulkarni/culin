@@ -16,4 +16,4 @@ run:
     NEXT_PUBLIC_COGNITO_USER_POOL_ID: us-east-1_FnEDXysUj
     NEXT_PUBLIC_COGNITO_CLIENT_ID: 4kjhqpg1b2u389rljtcdpn85kg
     NEXT_PUBLIC_AWS_REGION: us-east-1    
-    APP_BASE_URL: https://qg3p4aatdw.us-east-1.awsapprunner.com/
+    APP_BASE_URL: https://api.recipe-gen.culin.ai/

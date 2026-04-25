@@ -8,7 +8,7 @@ Use this backend as the **single base URL** for nutrition estimation and food se
 
 - **Base URL:** Set in your frontend env (e.g. `REACT_APP_API_URL` or `VITE_API_URL`).
   - Local: `http://localhost:8000`
-  - Production: your EC2 or App Runner URL (e.g. `https://your-app.us-east-1.awsapprunner.com`)
+  - Production: `https://api.nutrition-engine.culin.ai` (DigitalOcean)
 - **CORS:** Backend uses `CORS_ORIGINS` (comma-separated or `*`). Set it to your frontend origin(s) in production (e.g. `https://myapp.com,https://www.myapp.com`). For local dev, `*` is fine.
 
 ---
