@@ -1,7 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors, fontFamily, radius, shadows } from '@/src/design/tokens';
+import { GlassCard } from '@/src/components/GlassCard';
+import { colors, fontFamily, radius } from '@/src/design/tokens';
 
 export type SuggestionBadge = 'HIGH PROTEIN' | 'BALANCED' | 'LOW CAL' | 'QUICK' | 'AI PICK';
 
@@ -26,7 +27,7 @@ export function SuggestionCard({ suggestion, onLog, onCook }: Props) {
   const iconName = suggestion.icon ?? iconForBadge(suggestion.badge);
 
   return (
-    <View style={styles.card}>
+    <GlassCard style={styles.card}>
       <View style={styles.header}>
         <View style={styles.iconCircle}>
           <MaterialIcons name={iconName} size={18} color={colors.primary[700]} />
@@ -77,7 +78,7 @@ export function SuggestionCard({ suggestion, onLog, onCook }: Props) {
           <Text style={[styles.btnText, styles.btnTextSecondary]}>Cook</Text>
         </Pressable>
       </View>
-    </View>
+    </GlassCard>
   );
 }
 
@@ -115,11 +116,8 @@ function iconForBadge(badge?: SuggestionBadge): keyof typeof MaterialIcons.glyph
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.neutral.white,
-    borderRadius: radius.cardLarge,
     padding: 16,
     width: 200,
-    ...shadows.card,
   },
   header: {
     flexDirection: 'row',
@@ -201,9 +199,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary[600],
   },
   btnSecondary: {
-    backgroundColor: colors.neutral.offWhite,
-    borderWidth: 1,
-    borderColor: colors.neutral.gray100,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
   },
   btnText: {
     fontFamily: fontFamily.primaryMedium,
