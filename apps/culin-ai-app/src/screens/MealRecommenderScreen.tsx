@@ -1,121 +1,50 @@
 import { useAuth } from '@/src/contexts/AuthContext';
-import { colors, fontFamily, radius, shadows, spacing } from '@/src/design/tokens';
+import { ActionChip, ActionChips } from '@/src/components/ActionChips';
+import { CalorieRing } from '@/src/components/CalorieRing';
+import { MacroProgressBar } from '@/src/components/MacroProgressBar';
+import { MealIdeaModal, type MealIdeaSubmit } from '@/src/components/MealIdeaModal';
+import { PrimaryActionBar, type PrimaryAction } from '@/src/components/PrimaryActionBar';
+import { QuickLogModal } from '@/src/components/QuickLogModal';
+import { StatusLine } from '@/src/components/StatusLine';
+import { Suggestion, SuggestionCard } from '@/src/components/SuggestionCard';
+import { colors, fontFamily, radius, shadows } from '@/src/design/tokens';
 import { createCulinAIApi } from '@/src/services/culinaiApi';
 import { formatDateForLog, getDefaultMealType } from '@/src/services/fatSecretApi';
-import { computeDailyTotals, deleteMeal, getMealsByDate, saveMeal, type DailyTotals, type MealEntry } from '@/src/services/mealStore';
+import {
+  computeDailyTotals,
+  deleteMeal,
+  getMealsByDate,
+  saveMeal,
+  type DailyTotals,
+  type MealEntry,
+} from '@/src/services/mealStore';
 import { estimateFromText, isZeroEstimate, userMessageForError } from '@/src/services/nutritionApi';
 import { getSavedRecipes, SavedRecipe } from '@/src/services/recipeStore';
-import { getGreeting } from '@/src/utils/dateUtils';
+import { formatDayAndTime, formatMealTime, getGreeting } from '@/src/utils/dateUtils';
 import { MaterialIcons } from '@expo/vector-icons';
-import Slider from '@react-native-community/slider';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
-  View
+  View,
 } from 'react-native';
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
-const { width } = Dimensions.get('window');
-
-// Real meal data
-const COOK_MEALS = [
-  {
-    id: 'beef-rice',
-    name: 'Rice + 90/10 Ground Beef Bowl',
-    emoji: '🍚',
-    calories: 520,
-    protein: 45,
-    prepTime: 15,
-    cost: 3.5,
-    difficulty: 'Easy',
-  },
-  {
-    id: 'eggs-toast',
-    name: 'Scrambled Eggs + Toast',
-    emoji: '🍳',
-    calories: 340,
-    protein: 28,
-    prepTime: 8,
-    cost: 2.0,
-    difficulty: 'Easy',
-  },
-  {
-    id: 'chicken-broccoli',
-    name: 'Chicken + Broccoli + Rice',
-    emoji: '🍗',
-    calories: 580,
-    protein: 52,
-    prepTime: 20,
-    cost: 4.5,
-    difficulty: 'Medium',
-  },
-  {
-    id: 'yogurt-banana',
-    name: 'Oikos Yogurt + Banana',
-    emoji: '🥛',
-    calories: 180,
-    protein: 20,
-    prepTime: 1,
-    cost: 2.5,
-    difficulty: 'Instant',
-  },
-];
-
-const ORDER_MEALS = [
-  {
-    id: 'chipotle',
-    name: 'Chipotle Double Chicken Bowl',
-    emoji: '🌯',
-    restaurant: 'Chipotle',
-    calories: 680,
-    protein: 72,
-    cost: 12.5,
-    deliveryTime: 25,
-  },
-  {
-    id: 'subway',
-    name: 'Subway Turkey + Double Meat',
-    emoji: '🥖',
-    restaurant: 'Subway',
-    calories: 520,
-    protein: 54,
-    cost: 9.5,
-    deliveryTime: 20,
-  },
-  {
-    id: 'sweetgreen',
-    name: 'Sweetgreen Protein Bowl',
-    emoji: '🥗',
-    restaurant: 'Sweetgreen',
-    calories: 450,
-    protein: 42,
-    cost: 14.0,
-    deliveryTime: 30,
-  },
-];
-
-const FILTER_CHIPS = [
-  { id: 'high-protein', label: 'High protein', icon: 'fitness-center' },
-  { id: 'cheap', label: 'Cheap', icon: 'attach-money' },
-  { id: 'fast', label: 'Fast', icon: 'bolt' },
-  { id: 'vegetarian', label: 'Vegetarian', icon: 'eco' },
-  { id: 'low-carb', label: 'Low carb', icon: 'trending-down' },
-];
+interface NutritionGoals {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  bmr?: number;
+  tdee?: number;
+  weightKg?: number;
+}
 
 export default function MealRecommenderScreen() {
   const router = useRouter();
@@ -123,37 +52,31 @@ export default function MealRecommenderScreen() {
   const uid = getUserId();
   const userName = userData?.displayName?.split(' ')[0] || 'User';
   const greeting = getGreeting();
-  const [selectedMode, setSelectedMode] = useState<'cook' | 'order' | null>(null);
-  const [selectedFilters, setSelectedFilters] = useState<string[]>(['high-protein']);
-  const [showCookOptions, setShowCookOptions] = useState(false);
-  const [prompt, setPrompt] = useState('');
-  const [complexity, setComplexity] = useState(3);
-  const [nutritionGoals, setNutritionGoals] = useState<any>(null);
+
+  const [nutritionGoals, setNutritionGoals] = useState<NutritionGoals | null>(null);
   const [loadingGoals, setLoadingGoals] = useState(false);
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>([]);
-  const [loadingRecipes, setLoadingRecipes] = useState(false);
-  const [dailyTotals, setDailyTotals] = useState<DailyTotals>({ 
-    calories: 0, 
-    protein: 0, 
-    carbs: 0, 
-    fat: 0, 
-    mealCount: 0 
+  const [dailyTotals, setDailyTotals] = useState<DailyTotals>({
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0,
+    mealCount: 0,
   });
   const [todaysMeals, setTodaysMeals] = useState<MealEntry[]>([]);
-  const [quickDishName, setQuickDishName] = useState('');
-  const [quickIngredients, setQuickIngredients] = useState('');
-  const [quickPortion, setQuickPortion] = useState('');
-  const [quickLogLoading, setQuickLogLoading] = useState(false);
 
-  const cookScale = useSharedValue(1);
-  const orderScale = useSharedValue(1);
+  const [quickLogOpen, setQuickLogOpen] = useState(false);
+  const [ideaModalOpen, setIdeaModalOpen] = useState(false);
+  const [ideaPrefill, setIdeaPrefill] = useState('');
+  const [ideaFilters, setIdeaFilters] = useState<string[]>(['high-protein']);
 
-  // Fetch nutrition goals on mount
+  // Initial load
   useEffect(() => {
     fetchNutritionGoals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idToken, userData]);
 
-  // Refresh recipes and daily totals when screen comes into focus
+  // Refresh on focus
   useFocusEffect(
     useCallback(() => {
       if (uid) {
@@ -166,157 +89,41 @@ export default function MealRecommenderScreen() {
 
   const fetchSavedRecipes = async () => {
     if (!uid) return;
-
     try {
-      setLoadingRecipes(true);
-      const recipes = await getSavedRecipes(uid, 10);
+      const recipes = await getSavedRecipes(uid, 20);
       setSavedRecipes(recipes);
-      console.log('✅ Loaded saved recipes:', recipes.length);
     } catch (e) {
       console.error('Failed to load saved recipes:', e);
-    } finally {
-      setLoadingRecipes(false);
     }
   };
 
   const fetchDailyTotals = async () => {
     if (!uid) return;
-    
     try {
       const todayISO = formatDateForLog();
       const meals = await getMealsByDate(uid, todayISO);
-      const totals = computeDailyTotals(meals);
-      setDailyTotals(totals);
       setTodaysMeals(meals);
-      console.log('✅ Loaded daily totals:', totals);
+      setDailyTotals(computeDailyTotals(meals));
     } catch (e) {
       console.error('Failed to load daily totals:', e);
-      // Reset to zero on error
       setDailyTotals({ calories: 0, protein: 0, carbs: 0, fat: 0, mealCount: 0 });
       setTodaysMeals([]);
     }
   };
 
-  const handleDeleteRecipe = async (recipeId: string | undefined) => {
-    if (!uid || !recipeId) return;
-    
-    try {
-      const { deleteRecipe } = await import('@/src/services/recipeStore');
-      await deleteRecipe(uid, recipeId);
-      // Refresh the list
-      fetchSavedRecipes();
-    } catch (e) {
-      console.error('Failed to delete recipe:', e);
-    }
-  };
-
-  const handleAteRecipe = async (recipe: SavedRecipe) => {
-    if (!uid) return;
-    
-    try {
-      const todayISO = formatDateForLog();
-      await saveMeal(uid, {
-        foodName: recipe.name,
-        calories: recipe.calories,
-        protein: recipe.protein,
-        carbs: recipe.carbs,
-        fat: recipe.fat,
-        mealType: getDefaultMealType(),
-        date: todayISO,
-      });
-      
-      // Refresh daily totals to show updated macros
-      fetchDailyTotals();
-      
-      console.log('✅ Meal logged:', recipe.name);
-    } catch (e) {
-      console.error('Failed to log meal:', e);
-    }
-  };
-
-  const handleRemoveMeal = async (mealId: string | undefined) => {
-    if (!uid || !mealId) return;
-    
-    try {
-      await deleteMeal(uid, mealId);
-      // Refresh daily totals to show updated macros
-      fetchDailyTotals();
-      console.log('✅ Meal removed:', mealId);
-    } catch (e) {
-      console.error('Failed to remove meal:', e);
-    }
-  };
-
-  const handleQuickLogMeal = async () => {
-    if (!uid) return;
-    if (!quickDishName.trim()) {
-      Alert.alert('Required', 'Please enter a dish name.');
-      return;
-    }
-    if (!quickIngredients.trim()) {
-      Alert.alert('Required', 'Please enter at least one main ingredient.');
-      return;
-    }
-    if (!quickPortion.trim()) {
-      Alert.alert('Required', 'Please enter an estimated portion.');
-      return;
-    }
-
-    try {
-      setQuickLogLoading(true);
-      const estimateText = `${quickDishName.trim()}. Main ingredients: ${quickIngredients.trim()}. Estimated portion: ${quickPortion.trim()}.`;
-      const result = await estimateFromText(estimateText);
-
-      if (!result?.macros || isZeroEstimate(result.macros)) {
-        Alert.alert(
-          'Could not estimate',
-          'Nutrition engine could not estimate this meal. Try a more specific description.'
-        );
-        return;
-      }
-
-      const todayISO = formatDateForLog();
-      await saveMeal(uid, {
-        foodName: quickDishName.trim(),
-        calories: result.macros.calories ?? 0,
-        protein: result.macros.protein ?? 0,
-        carbs: result.macros.carbs ?? 0,
-        fat: result.macros.fat ?? 0,
-        servingSize: quickPortion.trim(),
-        mealType: getDefaultMealType(),
-        date: todayISO,
-      });
-
-      // Immediately reflect in progress bars and today's meals list.
-      await fetchDailyTotals();
-
-      setQuickDishName('');
-      setQuickIngredients('');
-      setQuickPortion('');
-      Alert.alert('Logged', 'Meal added to today\'s tracking.');
-    } catch (err: any) {
-      Alert.alert('Failed to log meal', userMessageForError(err));
-    } finally {
-      setQuickLogLoading(false);
-    }
-  };
-
   const fetchNutritionGoals = async () => {
     if (!userData) return;
-
     try {
       setLoadingGoals(true);
-      
-      // Try to fetch from API if available
+
       if (idToken) {
         try {
           const api = createCulinAIApi(idToken);
-          
           const height = userData.height || 178;
           const weight = userData.weight || 165;
           const age = userData.age || 22;
-          const sex = (userData.sex === 'M' || userData.sex === 'F') ? userData.sex : 'unknown';
-          
+          const sex = userData.sex === 'M' || userData.sex === 'F' ? userData.sex : 'unknown';
+
           let goal: 'cut' | 'maintain' | 'bulk' = 'maintain';
           if (userData.goals?.includes('lose_fat')) goal = 'cut';
           if (userData.goals?.includes('gain_muscle')) goal = 'bulk';
@@ -332,23 +139,19 @@ export default function MealRecommenderScreen() {
             activityLevel: 'moderate',
             goalPace: 'normal',
           });
-
           if (response.success) {
             setNutritionGoals(response.goals);
-            console.log('✅ Nutrition goals loaded from API:', response.goals);
             return;
           }
-        } catch (apiError) {
-          console.log('⚠️ API not available, using defaults');
+        } catch {
+          // fall through to defaults
         }
       }
 
-      // Fallback: Use reasonable defaults based on user goals
       let calories = 2400;
       let protein = 180;
       let carbs = 240;
       let fat = 80;
-
       if (userData.goals?.includes('lose_fat')) {
         calories = 2000;
         protein = 180;
@@ -360,17 +163,7 @@ export default function MealRecommenderScreen() {
         carbs = 320;
         fat = 90;
       }
-
-      setNutritionGoals({
-        calories,
-        protein,
-        carbs,
-        fat,
-        bmr: 1800,
-        tdee: calories,
-        weightKg: 75,
-      });
-      console.log('✅ Using default nutrition goals:', { calories, protein, carbs, fat });
+      setNutritionGoals({ calories, protein, carbs, fat });
     } catch (e) {
       console.error('Failed to load nutrition goals:', e);
     } finally {
@@ -378,166 +171,229 @@ export default function MealRecommenderScreen() {
     }
   };
 
-  const cookAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: cookScale.value }],
-  }));
+  // ----- Actions -----
 
-  const orderAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: orderScale.value }],
-  }));
-
-  const handleCookPress = () => {
-    cookScale.value = withSpring(0.95, { damping: 10 }, () => {
-      cookScale.value = withSpring(1);
-    });
-    
-    if (!prompt.trim()) {
-      setSelectedMode('cook');
-      return;
+  const handleQuickLogSubmit = async (description: string) => {
+    if (!uid) return;
+    try {
+      const result = await estimateFromText(description);
+      if (!result?.macros || isZeroEstimate(result.macros)) {
+        Alert.alert(
+          'Could not estimate',
+          'Try a more specific description (e.g. "two scrambled eggs with toast and butter").'
+        );
+        return;
+      }
+      const todayISO = formatDateForLog();
+      await saveMeal(uid, {
+        foodName: description,
+        calories: result.macros.calories ?? 0,
+        protein: result.macros.protein ?? 0,
+        carbs: result.macros.carbs ?? 0,
+        fat: result.macros.fat ?? 0,
+        mealType: getDefaultMealType(),
+        date: todayISO,
+      });
+      await fetchDailyTotals();
+      setQuickLogOpen(false);
+    } catch (err: any) {
+      Alert.alert('Failed to log meal', userMessageForError(err));
     }
-    
-    // Navigate to results screen with state
+  };
+
+  const handleRepeatLastMeal = async () => {
+    if (!uid || todaysMeals.length === 0) return;
+    const last = todaysMeals[0];
+    try {
+      const todayISO = formatDateForLog();
+      await saveMeal(uid, {
+        foodName: last.foodName,
+        calories: last.calories,
+        protein: last.protein,
+        carbs: last.carbs,
+        fat: last.fat,
+        mealType: getDefaultMealType(),
+        date: todayISO,
+      });
+      await fetchDailyTotals();
+    } catch (e) {
+      console.error('Failed to repeat meal:', e);
+    }
+  };
+
+  const handleRemoveMeal = async (mealId: string | undefined) => {
+    if (!uid || !mealId) return;
+    try {
+      await deleteMeal(uid, mealId);
+      await fetchDailyTotals();
+    } catch (e) {
+      console.error('Failed to remove meal:', e);
+    }
+  };
+
+  const openMealIdea = (prefill = '', filters: string[] = ['high-protein']) => {
+    setIdeaPrefill(prefill);
+    setIdeaFilters(filters);
+    setIdeaModalOpen(true);
+  };
+
+  const handleMealIdeaSubmit = (params: MealIdeaSubmit) => {
+    setIdeaModalOpen(false);
     router.push({
       pathname: '/meal-results' as any,
       params: {
-        mode: 'cook',
-        prompt: prompt.trim(),
-        filters: JSON.stringify(selectedFilters),
-        complexity: complexity.toString(),
+        mode: params.mode,
+        prompt: params.prompt,
+        filters: JSON.stringify(params.filters),
+        complexity: params.complexity.toString(),
       },
     });
   };
 
-  const handleOrderPress = () => {
-    orderScale.value = withSpring(0.95, { damping: 10 }, () => {
-      orderScale.value = withSpring(1);
-    });
-    
-    if (!prompt.trim()) {
-      setSelectedMode('order');
-      return;
+  const handleSuggestionLog = async (s: Suggestion) => {
+    if (!uid) return;
+    const recipe = savedRecipes.find((r) => r.id === s.id);
+    if (!recipe) return;
+    try {
+      const todayISO = formatDateForLog();
+      await saveMeal(uid, {
+        foodName: recipe.name,
+        calories: recipe.calories,
+        protein: recipe.protein,
+        carbs: recipe.carbs,
+        fat: recipe.fat,
+        mealType: getDefaultMealType(),
+        date: todayISO,
+      });
+      await fetchDailyTotals();
+    } catch (e) {
+      console.error('Failed to log suggestion:', e);
     }
-    
-    // Navigate to results screen with state
+  };
+
+  const handleSuggestionCook = (s: Suggestion) => {
+    const recipe = savedRecipes.find((r) => r.id === s.id);
+    if (!recipe) return;
     router.push({
       pathname: '/meal-results' as any,
       params: {
-        mode: 'order',
-        prompt: prompt.trim(),
-        filters: JSON.stringify(selectedFilters),
-        complexity: complexity.toString(),
+        mode: recipe.mode,
+        prompt: recipe.prompt,
+        filters: JSON.stringify([]),
+        complexity: recipe.complexity.toString(),
+        savedRecipe: JSON.stringify(recipe),
       },
     });
   };
 
-  const toggleFilter = (filterId: string) => {
-    setSelectedFilters((prev) =>
-      prev.includes(filterId)
-        ? prev.filter((id) => id !== filterId)
-        : [...prev, filterId]
-    );
-  };
+  // ----- Derived data -----
 
-  const buildSuggestionPrompt = (meal: any, type: 'cook' | 'order') => {
-    const filterContext = selectedFilters.length
-      ? `Focus on: ${selectedFilters.join(', ')}.`
-      : '';
-    const userPromptContext = prompt.trim()
-      ? `Additional user preference: ${prompt.trim()}.`
-      : '';
+  /**
+   * Pick up to 4 saved recipes that best fit the remaining-macro gap for today.
+   * Scoring: penalize recipes whose protein gives <30% of remaining-protein gap;
+   * prefer ones whose calorie cost stays under remaining-calories.
+   */
+  const eatNextSuggestions: Suggestion[] = useMemo(() => {
+    if (!nutritionGoals || savedRecipes.length === 0) return [];
+    const proteinLeft = Math.max(0, nutritionGoals.protein - dailyTotals.protein);
+    const calLeft = Math.max(0, nutritionGoals.calories - dailyTotals.calories);
 
-    if (type === 'cook') {
-      return [
-        `Generate a practical home-cook recipe for: ${meal.name}.`,
-        `Target around ${meal.calories} calories and ${meal.protein}g protein.`,
-        `Prep time should be about ${meal.prepTime} minutes and difficulty ${meal.difficulty}.`,
-        filterContext,
-        userPromptContext,
-      ]
-        .filter(Boolean)
-        .join(' ');
-    }
-
-    return [
-      `Generate an order-friendly meal breakdown for: ${meal.name}.`,
-      `Assume restaurant style meal, around ${meal.calories} calories and ${meal.protein}g protein.`,
-      filterContext,
-      userPromptContext,
-    ]
-      .filter(Boolean)
-      .join(' ');
-  };
-
-  const handleSuggestedMealSelect = (meal: any, type: 'cook' | 'order') => {
-    const generatedPrompt = buildSuggestionPrompt(meal, type);
-    router.push({
-      pathname: '/meal-results' as any,
-      params: {
-        mode: type,
-        prompt: generatedPrompt,
-        filters: JSON.stringify(selectedFilters),
-        complexity: complexity.toString(),
-      },
+    const scored = savedRecipes.map((r) => {
+      // closer to fitting remaining cals = better; over-cap = penalty
+      const calFit = calLeft > 0 ? Math.min(r.calories / calLeft, 1) : 0.5;
+      const proteinFit = proteinLeft > 0 ? Math.min(r.protein / proteinLeft, 1) : 0.5;
+      const score = proteinFit * 0.6 + calFit * 0.4;
+      return { recipe: r, score };
     });
+    scored.sort((a, b) => b.score - a.score);
+
+    return scored.slice(0, 6).map(({ recipe }) => ({
+      id: recipe.id ?? recipe.name,
+      name: recipe.name,
+      emoji: recipe.emoji || '🍽️',
+      protein: Math.round(recipe.protein),
+      calories: Math.round(recipe.calories),
+      prepTime: recipe.prepTime,
+      badge:
+        recipe.protein >= 40
+          ? 'HIGH PROTEIN'
+          : recipe.calories <= 350
+            ? 'LOW CAL'
+            : (recipe.prepTime ?? 30) <= 15
+              ? 'QUICK'
+              : 'BALANCED',
+    }));
+  }, [savedRecipes, nutritionGoals, dailyTotals]);
+
+  const eatNextSubtitle = useMemo(() => {
+    if (!nutritionGoals) return '';
+    const proteinLeft = Math.max(0, Math.round(nutritionGoals.protein - dailyTotals.protein));
+    if (proteinLeft > 30) {
+      return `Picked for the ${proteinLeft}g protein you have left`;
+    }
+    const calLeft = Math.max(0, Math.round(nutritionGoals.calories - dailyTotals.calories));
+    if (calLeft > 0) {
+      return `Picked for ${calLeft} cal remaining today`;
+    }
+    return `Saved ideas for next time`;
+  }, [nutritionGoals, dailyTotals]);
+
+  // ----- Primary action bar (contextual) -----
+
+  const primaryAction: PrimaryAction = {
+    label: 'Log a meal',
+    icon: 'add',
+    onPress: () => setQuickLogOpen(true),
   };
 
-  const renderMealCard = (meal: any, type: 'cook' | 'order') => (
-    <Pressable
-      key={meal.id}
-      style={styles.mealCard}
-      onPress={() => handleSuggestedMealSelect(meal, type)}
-    >
-      <View style={styles.mealHeader}>
-        <Text style={styles.mealEmoji}>{meal.emoji}</Text>
-        {type === 'order' && (
-          <View style={styles.restaurantBadge}>
-            <Text style={styles.badgeText}>{meal.restaurant}</Text>
-          </View>
-        )}
-      </View>
+  const secondaryAction: PrimaryAction = useMemo(() => {
+    if (!nutritionGoals) {
+      return { label: 'Eat next', icon: 'restaurant', onPress: () => openMealIdea() };
+    }
+    const proteinLeft = Math.max(0, Math.round(nutritionGoals.protein - dailyTotals.protein));
+    if (proteinLeft >= 30 && dailyTotals.mealCount > 0) {
+      return {
+        label: `Find ${proteinLeft}g protein`,
+        icon: 'fitness-center',
+        onPress: () => openMealIdea(`high protein, around ${proteinLeft}g`, ['high-protein']),
+      };
+    }
+    return { label: 'Eat next', icon: 'restaurant', onPress: () => openMealIdea() };
+  }, [nutritionGoals, dailyTotals]);
 
-      <Text style={styles.mealName}>{meal.name}</Text>
+  // ----- Action chips -----
 
-      <View style={styles.mealStats}>
-        <View style={styles.statItem}>
-          <MaterialIcons name="local-fire-department" size={14} color={colors.semantic.warning} />
-          <Text style={styles.statText}>{meal.calories} cal</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <MaterialIcons name="fitness-center" size={14} color={colors.primary[600]} />
-          <Text style={styles.statText}>{meal.protein}g protein</Text>
-        </View>
-      </View>
+  const actionChips: ActionChip[] = useMemo(() => {
+    const chips: ActionChip[] = [
+      {
+        id: 'log',
+        label: 'Log a meal',
+        icon: 'add',
+        variant: 'primary',
+        onPress: () => setQuickLogOpen(true),
+      },
+      {
+        id: 'idea',
+        label: 'Get a meal idea',
+        icon: 'restaurant',
+        variant: 'secondary',
+        onPress: () => openMealIdea(),
+      },
+    ];
+    if (todaysMeals.length > 0) {
+      chips.push({
+        id: 'repeat',
+        label: `Repeat ${todaysMeals[0].mealType.toLowerCase()}`,
+        icon: 'replay',
+        variant: 'secondary',
+        onPress: handleRepeatLastMeal,
+      });
+    }
+    return chips;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todaysMeals]);
 
-      <View style={styles.mealFooter}>
-        {type === 'cook' ? (
-          <>
-            <View style={styles.footerItem}>
-              <MaterialIcons name="schedule" size={14} color={colors.neutral.gray600} />
-              <Text style={styles.footerText}>{meal.prepTime} min</Text>
-            </View>
-            <Text style={styles.costText}>${meal.cost.toFixed(2)}</Text>
-          </>
-        ) : (
-          <>
-            <View style={styles.footerItem}>
-              <MaterialIcons name="delivery-dining" size={14} color={colors.neutral.gray600} />
-              <Text style={styles.footerText}>{meal.deliveryTime} min</Text>
-            </View>
-            <Text style={styles.costText}>${meal.cost.toFixed(2)}</Text>
-          </>
-        )}
-      </View>
-
-      <Pressable
-        style={styles.selectButton}
-        onPress={() => handleSuggestedMealSelect(meal, type)}
-      >
-        <Text style={styles.selectButtonText}>Choose this meal</Text>
-      </Pressable>
-    </Pressable>
-  );
+  // ----- Render -----
 
   return (
     <View style={styles.container}>
@@ -552,83 +408,93 @@ export default function MealRecommenderScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* Greeting */}
         <Animated.View entering={FadeIn.duration(200)} style={styles.header}>
-          <Text style={styles.greeting}>
-            {greeting}, {userName}
-          </Text>
+          <Text style={styles.dayTime}>{formatDayAndTime()}</Text>
+          <Pressable onPress={() => router.push('/(tabs)/profile' as any)} hitSlop={8}>
+            <Text style={styles.greeting}>
+              {greeting}, {userName}
+            </Text>
+          </Pressable>
+          <StatusLine goals={nutritionGoals} totals={dailyTotals} />
         </Animated.View>
 
-        {/* Nutrition Goals */}
+        {/* Daily Goals Card */}
         {nutritionGoals && (
-          <Animated.View entering={FadeInDown.duration(200).delay(25)} style={styles.goalsCard}>
-            <View style={styles.goalsHeader}>
-              <MaterialIcons name="track-changes" size={18} color={colors.primary[600]} />
-              <Text style={styles.goalsTitle}>Your Daily Goals</Text>
-              {dailyTotals.mealCount > 0 && (
-                <View style={styles.mealCountBadge}>
-                  <Text style={styles.mealCountText}>{dailyTotals.mealCount} meals</Text>
+          <Animated.View
+            entering={FadeInDown.duration(220).delay(40)}
+            style={styles.goalsCard}
+          >
+            <View style={styles.goalsTopRow}>
+              <CalorieRing
+                consumed={dailyTotals.calories}
+                goal={nutritionGoals.calories}
+                size={92}
+              />
+              <View style={styles.goalsRight}>
+                <View style={styles.goalsTitleRow}>
+                  <Text style={styles.goalsTitle}>Daily goals</Text>
+                  <Text style={styles.goalsTotal}>
+                    {Math.round(dailyTotals.calories)} / {Math.round(nutritionGoals.calories)} cal
+                  </Text>
                 </View>
-              )}
-            </View>
-            <View style={styles.goalsGrid}>
-              <View style={styles.goalItem}>
-                <Text style={styles.goalValue}>
-                  {Math.max(0, Math.round(nutritionGoals.calories - dailyTotals.calories))}
-                </Text>
-                <Text style={styles.goalLabel}>Calories Left</Text>
-              </View>
-              <View style={styles.goalItem}>
-                <Text style={styles.goalValue}>
-                  {Math.max(0, Math.round(nutritionGoals.protein - dailyTotals.protein))}g
-                </Text>
-                <Text style={styles.goalLabel}>Protein Left</Text>
-              </View>
-              <View style={styles.goalItem}>
-                <Text style={styles.goalValue}>
-                  {Math.max(0, Math.round(nutritionGoals.carbs - dailyTotals.carbs))}g
-                </Text>
-                <Text style={styles.goalLabel}>Carbs Left</Text>
-              </View>
-              <View style={styles.goalItem}>
-                <Text style={styles.goalValue}>
-                  {Math.max(0, Math.round(nutritionGoals.fat - dailyTotals.fat))}g
-                </Text>
-                <Text style={styles.goalLabel}>Fat Left</Text>
+                <MacroProgressBar
+                  label="Protein"
+                  consumed={dailyTotals.protein}
+                  goal={nutritionGoals.protein}
+                  color={colors.primary[600]}
+                />
+                <MacroProgressBar
+                  label="Carbs"
+                  consumed={dailyTotals.carbs}
+                  goal={nutritionGoals.carbs}
+                  color={colors.accent.teal}
+                />
+                <MacroProgressBar
+                  label="Fat"
+                  consumed={dailyTotals.fat}
+                  goal={nutritionGoals.fat}
+                  color={colors.semantic.warning}
+                />
               </View>
             </View>
           </Animated.View>
         )}
 
-        {loadingGoals && (
+        {loadingGoals && !nutritionGoals && (
           <View style={styles.loadingGoals}>
             <ActivityIndicator size="small" color={colors.primary[600]} />
-            <Text style={styles.loadingText}>Loading your nutrition goals...</Text>
+            <Text style={styles.loadingText}>Loading your nutrition goals…</Text>
           </View>
         )}
 
+        {/* Action chips */}
+        <Animated.View entering={FadeInDown.duration(220).delay(70)} style={styles.chipsWrapper}>
+          <ActionChips chips={actionChips} />
+        </Animated.View>
+
         {/* Today's Meals */}
         {todaysMeals.length > 0 && (
-          <Animated.View entering={FadeInDown.duration(200).delay(50)} style={styles.todaysMealsCard}>
-            <View style={styles.todaysMealsHeader}>
-              <MaterialIcons name="restaurant" size={18} color={colors.primary[600]} />
-              <Text style={styles.todaysMealsTitle}>Today&apos;s Meals</Text>
-              <View style={styles.mealCountBadge}>
-                <Text style={styles.mealCountText}>{todaysMeals.length} logged</Text>
-              </View>
+          <Animated.View
+            entering={FadeInDown.duration(220).delay(100)}
+            style={styles.section}
+          >
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Today</Text>
+              <Text style={styles.sectionMeta}>
+                {todaysMeals.length} {todaysMeals.length === 1 ? 'meal' : 'meals'} ·{' '}
+                {Math.round(dailyTotals.calories)} cal
+              </Text>
             </View>
-            <View style={styles.todaysMealsList}>
+            <View style={styles.mealsList}>
               {todaysMeals.map((meal) => {
-                // Try to find matching recipe from saved recipes
-                const matchingRecipe = savedRecipes.find(r => r.name === meal.foodName);
-                
+                const matchingRecipe = savedRecipes.find((r) => r.name === meal.foodName);
                 return (
                   <Pressable
                     key={meal.id}
-                    style={styles.todaysMealRow}
+                    style={styles.mealRow}
                     onPress={() => {
                       if (matchingRecipe) {
-                        // Navigate to full recipe view
                         router.push({
                           pathname: '/meal-results' as any,
                           params: {
@@ -642,14 +508,23 @@ export default function MealRecommenderScreen() {
                       }
                     }}
                   >
-                    <View style={styles.todaysMealLeft}>
-                      <Text style={styles.todaysMealName}>{meal.foodName}</Text>
-                      <Text style={styles.todaysMealStats}>
-                        {meal.protein}g protein · {meal.calories} cal
+                    <View style={styles.mealAvatar}>
+                      <Text style={styles.mealAvatarEmoji}>
+                        {matchingRecipe?.emoji || mealEmojiFor(meal.mealType)}
+                      </Text>
+                    </View>
+                    <View style={styles.mealCenter}>
+                      <Text style={styles.mealName} numberOfLines={1}>
+                        {meal.foodName}
+                      </Text>
+                      <Text style={styles.mealStats}>
+                        {Math.round(meal.protein)}g protein · {Math.round(meal.calories)} cal
+                        {meal.createdAt ? ` · ${formatMealTime(meal.createdAt)}` : ''}
                       </Text>
                     </View>
                     <Pressable
-                      style={styles.removeMealButton}
+                      style={styles.removeBtn}
+                      hitSlop={10}
                       onPress={(e) => {
                         e.stopPropagation();
                         handleRemoveMeal(meal.id);
@@ -664,264 +539,84 @@ export default function MealRecommenderScreen() {
           </Animated.View>
         )}
 
-        {/* Separator Line */}
-        {todaysMeals.length > 0 && (
-          <View style={styles.sectionSeparator} />
+        {/* Eat Next */}
+        {eatNextSuggestions.length > 0 && (
+          <Animated.View
+            entering={FadeInDown.duration(220).delay(130)}
+            style={styles.section}
+          >
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Eat next</Text>
+              <Pressable onPress={() => openMealIdea()}>
+                <Text style={styles.sectionLink}>See more</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.sectionSubtitle}>{eatNextSubtitle}</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.suggestionsRow}
+            >
+              {eatNextSuggestions.map((s) => (
+                <SuggestionCard
+                  key={s.id}
+                  suggestion={s}
+                  onLog={handleSuggestionLog}
+                  onCook={handleSuggestionCook}
+                />
+              ))}
+            </ScrollView>
+          </Animated.View>
         )}
 
-        {/* Quick Manual Log */}
-        <Animated.View entering={FadeInDown.duration(200).delay(65)} style={styles.quickLogCard}>
-          <View style={styles.quickLogHeader}>
-            <MaterialIcons name="edit-note" size={18} color={colors.primary[600]} />
-            <Text style={styles.quickLogTitle}>Quick Log Meal</Text>
-          </View>
-          <Text style={styles.quickLogSubtitle}>
-            Log made meals or anything you ate. We&apos;ll estimate macros with the nutrition engine.
-          </Text>
-
-          <View style={styles.quickInputWrapper}>
-            <TextInput
-              style={styles.quickInput}
-              placeholder="Dish name (e.g. Chicken biryani)"
-              placeholderTextColor={colors.neutral.gray300}
-              value={quickDishName}
-              onChangeText={setQuickDishName}
-            />
-          </View>
-
-          <View style={styles.quickInputWrapper}>
-            <TextInput
-              style={styles.quickInput}
-              placeholder="Main ingredients (e.g. chicken, rice, yogurt)"
-              placeholderTextColor={colors.neutral.gray300}
-              value={quickIngredients}
-              onChangeText={setQuickIngredients}
-            />
-          </View>
-
-          <View style={styles.quickInputWrapper}>
-            <TextInput
-              style={styles.quickInput}
-              placeholder="Estimated portion (e.g. 1 medium bowl)"
-              placeholderTextColor={colors.neutral.gray300}
-              value={quickPortion}
-              onChangeText={setQuickPortion}
-            />
-          </View>
-
-          <Pressable
-            style={[styles.quickLogButton, quickLogLoading && styles.quickLogButtonDisabled]}
-            onPress={handleQuickLogMeal}
-            disabled={quickLogLoading}
+        {/* Empty state when no meals + no recipes */}
+        {todaysMeals.length === 0 && savedRecipes.length === 0 && (
+          <Animated.View
+            entering={FadeInDown.duration(220).delay(120)}
+            style={styles.emptyCard}
           >
-            {quickLogLoading ? (
-              <ActivityIndicator size="small" color={colors.neutral.white} />
-            ) : (
-              <>
-                <MaterialIcons name="add-circle-outline" size={18} color={colors.neutral.white} />
-                <Text style={styles.quickLogButtonText}>Estimate &amp; Log Meal</Text>
-              </>
-            )}
-          </Pressable>
-        </Animated.View>
-
-        <View style={styles.sectionSeparator} />
-
-        {/* Main Decision Title */}
-        <Animated.View entering={FadeInDown.duration(200).delay(50)} style={styles.titleSection}>
-          <Text style={styles.mainTitle}>What should you eat next?</Text>
-        </Animated.View>
-
-        {/* Prompt Input */}
-        <Animated.View entering={FadeInDown.duration(200).delay(75)} style={styles.inputSection}>
-          <View style={styles.inputWrapper}>
-            <MaterialIcons name="search" size={20} color={colors.neutral.gray600} />
-            <TextInput
-              style={styles.textInput}
-              placeholder="e.g. high protein, under 30 min..."
-              placeholderTextColor={colors.neutral.gray300}
-              value={prompt}
-              onChangeText={setPrompt}
-              returnKeyType="done"
-            />
-            {prompt.length > 0 && (
-              <Pressable onPress={() => setPrompt('')}>
-                <MaterialIcons name="close" size={18} color={colors.neutral.gray600} />
-              </Pressable>
-            )}
-          </View>
-          <Text style={styles.inputHint}>
-            💡 Tip: Enter your preferences, then tap Cook or Order
-          </Text>
-          
-          {/* Complexity Slider */}
-          <View style={styles.complexitySection}>
-            <View style={styles.complexityHeader}>
-              <MaterialIcons name="tune" size={18} color={colors.primary[600]} />
-              <Text style={styles.complexityLabel}>Recipe Complexity: {complexity}</Text>
-            </View>
-            <Slider
-              style={styles.slider}
-              minimumValue={1}
-              maximumValue={5}
-              step={1}
-              value={complexity}
-              onValueChange={setComplexity}
-              minimumTrackTintColor={colors.primary[600]}
-              maximumTrackTintColor={colors.neutral.gray100}
-              thumbTintColor={colors.primary[600]}
-            />
-            <View style={styles.sliderLabels}>
-              <Text style={styles.sliderLabelText}>Simple</Text>
-              <Text style={styles.sliderLabelText}>Complex</Text>
-            </View>
-          </View>
-
-          {/* Past Recipes Section - Always visible */}
-          <View style={styles.pastRecipesSection}>
-            <View style={styles.pastRecipesHeader}>
-              <MaterialIcons name="history" size={18} color={colors.primary[600]} />
-              <Text style={styles.pastRecipesTitle}>Past Recipes</Text>
-              <Text style={styles.pastRecipesHint}>Tap to add</Text>
-            </View>
-            
-            {loadingRecipes ? (
-              <View style={styles.loadingRecipes}>
-                <ActivityIndicator size="small" color={colors.primary[600]} />
-                <Text style={styles.loadingText}>Loading recipes...</Text>
-              </View>
-            ) : savedRecipes.length > 0 ? (
-              <View style={styles.recipesList}>
-                {savedRecipes.slice(0, 5).map((recipe) => (
-                  <Pressable
-                    key={recipe.id}
-                    style={styles.recipeRow}
-                    onPress={() => {
-                      // Tap to add to today's meals
-                      handleAteRecipe(recipe);
-                    }}
-                    onLongPress={() => {
-                      // Long press to view full recipe
-                      router.push({
-                        pathname: '/meal-results' as any,
-                        params: {
-                          mode: recipe.mode,
-                          prompt: recipe.prompt,
-                          filters: JSON.stringify([]),
-                          complexity: recipe.complexity.toString(),
-                          savedRecipe: JSON.stringify(recipe),
-                        },
-                      });
-                    }}
-                  >
-                    <View style={styles.recipeRowLeft}>
-                      <Text style={styles.recipeRowName}>{recipe.name}</Text>
-                      <Text style={styles.recipeRowStats}>
-                        {recipe.protein}g protein · {recipe.calories} cal
-                      </Text>
-                    </View>
-                    <Pressable
-                      style={styles.deleteButton}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleDeleteRecipe(recipe.id);
-                      }}
-                    >
-                      <MaterialIcons name="close" size={16} color={colors.neutral.gray600} />
-                    </Pressable>
-                  </Pressable>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyRecipesPlaceholder}>
-                <MaterialIcons name="restaurant-menu" size={32} color={colors.neutral.gray300} />
-                <Text style={styles.emptyRecipesText}>No recipes yet</Text>
-                <Text style={styles.emptyRecipesSubtext}>
-                  Your generated recipes will appear here
-                </Text>
-              </View>
-            )}
-          </View>
-        </Animated.View>
-
-        {/* Cook or Order Cards - Commented out, moved to bottom */}
-        {/* <Animated.View entering={FadeInDown.duration(200).delay(100)} style={styles.decisionCards}>
-          <Pressable onPress={handleCookPress} style={styles.decisionCardWrapper}>
-            <Animated.View style={[styles.decisionCard, cookAnimatedStyle]}>
-              <View style={styles.cardIconContainer}>
-                <MaterialIcons name="restaurant" size={40} color={colors.primary[600]} />
-              </View>
-              <Text style={styles.cardTitle}>Cook</Text>
-              <Text style={styles.cardSubtitle}>Make a quick healthy meal</Text>
-            </Animated.View>
-          </Pressable>
-        </Animated.View> */}
-
-        {/* Show meals based on selection */}
-        {selectedMode && (
-          <>
-            {/* Filter Chips */}
-            <Animated.View entering={FadeInDown.duration(200).delay(150)}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.filtersContainer}
-              >
-                {FILTER_CHIPS.map((filter) => {
-                  const isSelected = selectedFilters.includes(filter.id);
-                  return (
-                    <Pressable
-                      key={filter.id}
-                      style={[styles.filterChip, isSelected && styles.filterChipActive]}
-                      onPress={() => toggleFilter(filter.id)}
-                    >
-                      <MaterialIcons
-                        name={filter.icon as any}
-                        size={14}
-                        color={isSelected ? colors.primary[700] : colors.neutral.gray600}
-                      />
-                      <Text style={[styles.filterText, isSelected && styles.filterTextActive]}>
-                        {filter.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </Animated.View>
-
-            {/* Meal Suggestions */}
-            <Animated.View entering={FadeInDown.duration(200).delay(200)} style={styles.mealsSection}>
-              <Text style={styles.sectionTitle}>
-                {selectedMode === 'cook' ? 'Quick recipes' : 'Best options near you'}
-              </Text>
-              <View style={styles.mealsGrid}>
-                {selectedMode === 'cook'
-                  ? COOK_MEALS.map((meal) => renderMealCard(meal, 'cook'))
-                  : ORDER_MEALS.map((meal) => renderMealCard(meal, 'order'))}
-              </View>
-            </Animated.View>
-          </>
+            <MaterialIcons name="restaurant-menu" size={36} color={colors.neutral.gray300} />
+            <Text style={styles.emptyTitle}>Start your day</Text>
+            <Text style={styles.emptySubtitle}>
+              Log your first meal or get an AI-picked idea tailored to your goals.
+            </Text>
+          </Animated.View>
         )}
       </ScrollView>
-      
-      {/* Sticky Cook Button at Bottom */}
-      <Animated.View entering={FadeInDown.duration(200).delay(100)} style={styles.stickyButtonContainer}>
-        <Pressable onPress={handleCookPress} style={styles.cookButton}>
-          <Animated.View style={cookAnimatedStyle}>
-            <LinearGradient
-              colors={[colors.primary[500], colors.primary[600], colors.primary[700]]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.cookButtonGradient}
-            >
-              <MaterialIcons name="restaurant" size={24} color={colors.neutral.white} />
-              <Text style={styles.cookButtonText}>What should I eat?</Text>
-            </LinearGradient>
-          </Animated.View>
-        </Pressable>
-      </Animated.View>
+
+      {/* Contextual sticky action bar */}
+      <PrimaryActionBar primary={primaryAction} secondary={secondaryAction} />
+
+      {/* Modals */}
+      <QuickLogModal
+        visible={quickLogOpen}
+        onClose={() => setQuickLogOpen(false)}
+        onSubmit={handleQuickLogSubmit}
+      />
+      <MealIdeaModal
+        visible={ideaModalOpen}
+        onClose={() => setIdeaModalOpen(false)}
+        onSubmit={handleMealIdeaSubmit}
+        initialPrompt={ideaPrefill}
+        initialFilters={ideaFilters}
+      />
     </View>
   );
+}
+
+function mealEmojiFor(mealType: MealEntry['mealType']) {
+  switch (mealType) {
+    case 'Breakfast':
+      return '🍳';
+    case 'Lunch':
+      return '🥗';
+    case 'Dinner':
+      return '🍽️';
+    case 'Snack':
+      return '🍎';
+    default:
+      return '🍽️';
+  }
 }
 
 const styles = StyleSheet.create({
@@ -931,10 +626,16 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 80,
-    paddingBottom: 120,
+    paddingBottom: 140,
   },
   header: {
     marginBottom: 16,
+  },
+  dayTime: {
+    fontFamily: fontFamily.primary,
+    fontSize: 13,
+    color: colors.neutral.gray600,
+    marginBottom: 6,
   },
   greeting: {
     fontFamily: fontFamily.primary,
@@ -949,60 +650,29 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     ...shadows.card,
   },
-  goalsHeader: {
+  goalsTopRow: {
     flexDirection: 'row',
+    gap: 16,
     alignItems: 'center',
-    gap: 8,
+  },
+  goalsRight: {
+    flex: 1,
+  },
+  goalsTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
     marginBottom: 12,
   },
   goalsTitle: {
     fontFamily: fontFamily.primaryMedium,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.neutral.blackSoft,
   },
-  goalsGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  goalItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  goalValue: {
-    fontFamily: fontFamily.primaryMedium,
-    fontSize: 18,
-    color: colors.primary[700],
-    marginBottom: 4,
-  },
-  goalLabel: {
+  goalsTotal: {
     fontFamily: fontFamily.primary,
-    fontSize: 11,
-    color: colors.neutral.gray600,
-  },
-  mealCountBadge: {
-    backgroundColor: colors.primary[600],
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 'auto',
-  },
-  mealCountText: {
-    fontFamily: fontFamily.primaryMedium,
-    fontSize: 11,
-    color: colors.neutral.white,
-  },
-  miniProgressBar: {
-    height: 3,
-    backgroundColor: colors.neutral.gray100,
-    borderRadius: 2,
-    marginTop: 6,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  miniProgressFill: {
-    height: '100%',
-    backgroundColor: colors.primary[600],
-    borderRadius: 2,
+    fontSize: 12,
+    color: colors.neutral.gray300,
   },
   loadingGoals: {
     flexDirection: 'row',
@@ -1010,481 +680,118 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 16,
-  },
-  todaysMealsCard: {
-    backgroundColor: colors.neutral.white,
-    borderRadius: radius.card,
-    padding: 16,
     marginBottom: 16,
-    ...shadows.card,
-  },
-  todaysMealsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  todaysMealsTitle: {
-    fontFamily: fontFamily.primaryMedium,
-    fontSize: 14,
-    color: colors.neutral.blackSoft,
-    flex: 1,
-  },
-  todaysMealsList: {
-    gap: 0,
-  },
-  todaysMealRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.neutral.gray100,
-    backgroundColor: 'transparent',
-  },
-  todaysMealLeft: {
-    flex: 1,
-  },
-  todaysMealName: {
-    fontFamily: fontFamily.primary,
-    fontSize: 15,
-    color: colors.neutral.blackSoft,
-    marginBottom: 4,
-  },
-  todaysMealStats: {
-    fontFamily: fontFamily.primary,
-    fontSize: 13,
-    color: colors.neutral.gray600,
-  },
-  removeMealButton: {
-    padding: 8,
-  },
-  sectionSeparator: {
-    height: 1,
-    backgroundColor: colors.neutral.gray100,
-    marginVertical: 24,
-  },
-  quickLogCard: {
-    backgroundColor: colors.neutral.white,
-    borderRadius: radius.card,
-    padding: 16,
-    marginBottom: 16,
-    ...shadows.card,
-  },
-  quickLogHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
-  },
-  quickLogTitle: {
-    fontFamily: fontFamily.primaryMedium,
-    fontSize: 14,
-    color: colors.neutral.blackSoft,
-  },
-  quickLogSubtitle: {
-    fontFamily: fontFamily.primary,
-    fontSize: 12,
-    color: colors.neutral.gray600,
-    marginBottom: 12,
-  },
-  quickInputWrapper: {
-    backgroundColor: colors.neutral.offWhite,
-    borderRadius: radius.button,
-    paddingHorizontal: 12,
-    marginBottom: 10,
-  },
-  quickInput: {
-    fontFamily: fontFamily.primary,
-    fontSize: 14,
-    color: colors.neutral.blackSoft,
-    paddingVertical: 12,
-  },
-  quickLogButton: {
-    marginTop: 4,
-    backgroundColor: colors.primary[600],
-    borderRadius: radius.button,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  quickLogButtonDisabled: {
-    opacity: 0.75,
-  },
-  quickLogButtonText: {
-    fontFamily: fontFamily.primaryMedium,
-    fontSize: 14,
-    color: colors.neutral.white,
   },
   loadingText: {
     fontFamily: fontFamily.primary,
     fontSize: 13,
     color: colors.neutral.gray600,
   },
-  titleSection: {
-    marginBottom: 16,
-  },
-  mainTitle: {
-    fontFamily: fontFamily.primaryLight,
-    fontSize: 20,
-    color: colors.neutral.blackSoft,
-    lineHeight: 28,
-  },
-  inputSection: {
+  chipsWrapper: {
     marginBottom: 24,
   },
-  inputWrapper: {
+  section: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.neutral.white,
-    borderRadius: radius.button,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
-    ...shadows.card,
-  },
-  textInput: {
-    flex: 1,
-    fontFamily: fontFamily.primary,
-    fontSize: 15,
-    color: colors.neutral.blackSoft,
-  },
-  inputHint: {
-    fontFamily: fontFamily.primary,
-    fontSize: 12,
-    color: colors.neutral.gray600,
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  complexitySection: {
-    marginTop: 16,
-    padding: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    borderRadius: radius.card,
-  },
-  complexityHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  complexityLabel: {
-    fontFamily: fontFamily.primaryMedium,
-    fontSize: 14,
-    color: colors.neutral.blackSoft,
-  },
-  slider: {
-    width: '100%',
-    height: 40,
-  },
-  sliderLabels: {
-    flexDirection: 'row',
+    alignItems: 'baseline',
     justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  sliderLabelText: {
-    fontFamily: fontFamily.primary,
-    fontSize: 11,
-    color: colors.neutral.gray600,
-  },
-  pastRecipesSection: {
-    marginTop: 20,
-    padding: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    borderRadius: radius.card,
-  },
-  pastRecipesHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  pastRecipesTitle: {
-    fontFamily: fontFamily.primaryMedium,
-    fontSize: 14,
-    color: colors.neutral.blackSoft,
-    flex: 1,
-  },
-  pastRecipesHint: {
-    fontFamily: fontFamily.primary,
-    fontSize: 12,
-    color: colors.neutral.gray600,
-  },
-  loadingRecipes: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-  },
-  recipesList: {
-    gap: 0,
-  },
-  recipeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.neutral.gray100,
-  },
-  recipeRowLeft: {
-    flex: 1,
-  },
-  recipeRowName: {
-    fontFamily: fontFamily.primary,
-    fontSize: 15,
-    color: colors.neutral.blackSoft,
     marginBottom: 4,
   },
-  recipeRowStats: {
-    fontFamily: fontFamily.primary,
-    fontSize: 13,
-    color: colors.neutral.gray600,
-  },
-  deleteButton: {
-    padding: 8,
-  },
-  emptyRecipesPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-  },
-  emptyRecipesText: {
+  sectionTitle: {
     fontFamily: fontFamily.primaryMedium,
-    fontSize: 14,
-    color: colors.neutral.gray600,
-    marginTop: 12,
-    marginBottom: 4,
+    fontSize: 18,
+    color: colors.neutral.blackSoft,
   },
-  emptyRecipesSubtext: {
+  sectionMeta: {
     fontFamily: fontFamily.primary,
     fontSize: 12,
     color: colors.neutral.gray300,
-    textAlign: 'center',
   },
-  decisionCards: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 24,
-  },
-  decisionCardWrapper: {
-    flex: 1,
-  },
-  decisionCard: {
-    backgroundColor: colors.neutral.white,
-    borderRadius: radius.card,
-    padding: 20,
-    alignItems: 'center',
-    ...shadows.card,
-  },
-  cardIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.primary.soft,
-    justifyContent: 'center',
-    alignItems: 'center',
+  sectionSubtitle: {
+    fontFamily: fontFamily.primary,
+    fontSize: 13,
+    color: colors.neutral.gray600,
     marginBottom: 12,
   },
-  cardTitle: {
+  sectionLink: {
     fontFamily: fontFamily.primaryMedium,
-    fontSize: 20,
-    color: colors.neutral.blackSoft,
-    marginBottom: 6,
-  },
-  cardSubtitle: {
-    fontFamily: fontFamily.primary,
     fontSize: 13,
-    color: colors.neutral.gray600,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  filtersContainer: {
-    paddingBottom: 16,
-    gap: 8,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.neutral.white,
-    borderRadius: radius.chip,
-    marginRight: spacing.sm,
-    gap: spacing.xs,
-    ...shadows.card,
-  },
-  filterChipActive: {
-    backgroundColor: colors.primary.soft,
-    borderWidth: 1,
-    borderColor: colors.primary[600],
-  },
-  filterText: {
-    fontFamily: fontFamily.primary,
-    fontSize: 13,
-    color: colors.neutral.gray600,
-  },
-  filterTextActive: {
-    fontFamily: fontFamily.primaryMedium,
     color: colors.primary[700],
   },
-  mealsSection: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontFamily: fontFamily.primary,
-    fontSize: 17,
-    fontWeight: '500',
-    color: colors.neutral.blackSoft,
-    marginBottom: spacing.lg,
-  },
-  mealsGrid: {
-    gap: spacing.lg,
-  },
-  mealCard: {
+  mealsList: {
     backgroundColor: colors.neutral.white,
     borderRadius: radius.card,
-    padding: spacing.lg,
+    overflow: 'hidden',
     ...shadows.card,
   },
-  mealHeader: {
+  mealRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.neutral.gray100,
   },
-  mealEmoji: {
-    fontSize: 48,
+  mealAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.neutral.offWhite,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  restaurantBadge: {
-    backgroundColor: colors.primary[600],
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.chip,
+  mealAvatarEmoji: {
+    fontSize: 18,
   },
-  badgeText: {
-    fontFamily: fontFamily.primaryMedium,
-    fontSize: 11,
-    color: colors.neutral.white,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  mealCenter: {
+    flex: 1,
   },
   mealName: {
-    fontFamily: fontFamily.primary,
-    fontSize: 18,
+    fontFamily: fontFamily.primaryMedium,
+    fontSize: 15,
     color: colors.neutral.blackSoft,
-    marginBottom: spacing.md,
-    lineHeight: 24,
+    marginBottom: 2,
   },
   mealStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  statDivider: {
-    width: 1,
-    height: 12,
-    backgroundColor: colors.neutral.gray100,
-    marginHorizontal: spacing.md,
-  },
-  statText: {
-    fontFamily: fontFamily.primary,
-    fontSize: 13,
-    color: colors.neutral.gray600,
-  },
-  mealFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  footerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  footerText: {
     fontFamily: fontFamily.primary,
     fontSize: 12,
     color: colors.neutral.gray600,
   },
-  costText: {
-    fontFamily: fontFamily.primaryMedium,
-    fontSize: 16,
-    color: colors.primary[700],
-  },
-  selectButton: {
-    backgroundColor: colors.primary.soft,
-    paddingVertical: spacing.md,
-    borderRadius: radius.button,
-    alignItems: 'center',
-  },
-  selectButtonText: {
-    fontFamily: fontFamily.primaryMedium,
-    fontSize: 15,
-    color: colors.primary[700],
-  },
-  floatingButton: {
-    position: 'absolute',
-    bottom: 32,
-    left: 20,
-    right: 20,
-  },
-  voiceButton: {
-    borderRadius: radius.button,
-    overflow: 'hidden',
-    ...shadows.floating,
-    height: 56,
-  },
-  voiceButtonGradient: {
-    flex: 1,
-    flexDirection: 'row',
+  removeBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
   },
-  voiceButtonText: {
+  suggestionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 4,
+    paddingRight: 4,
+  },
+  emptyCard: {
+    backgroundColor: colors.neutral.white,
+    borderRadius: radius.card,
+    padding: 32,
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 24,
+    ...shadows.card,
+  },
+  emptyTitle: {
     fontFamily: fontFamily.primaryMedium,
     fontSize: 17,
-    color: colors.neutral.white,
+    color: colors.neutral.blackSoft,
+    marginTop: 4,
   },
-  stickyButtonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-    paddingTop: 16,
-    backgroundColor: 'transparent',
-  },
-  cookButton: {
-    borderRadius: radius.button,
-    overflow: 'hidden',
-    ...shadows.floating,
-    elevation: 8,
-  },
-  cookButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    height: 60,
-    gap: 12,
-  },
-  cookButtonText: {
-    fontFamily: fontFamily.primaryMedium,
-    fontSize: 18,
-    color: colors.neutral.white,
-    fontWeight: '600',
+  emptySubtitle: {
+    fontFamily: fontFamily.primary,
+    fontSize: 13,
+    color: colors.neutral.gray600,
+    textAlign: 'center',
   },
 });

@@ -59,3 +59,40 @@ export function formatDateOfBirth(dateString: string): string {
   return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
+/**
+ * Format a meal timestamp as "8:42 AM". Accepts ISO string, Date, or
+ * Firestore-style timestamp objects with seconds/nanoseconds.
+ */
+export function formatMealTime(input: any): string {
+  if (!input) return '';
+  let date: Date;
+  if (typeof input === 'string') {
+    date = new Date(input);
+  } else if (input instanceof Date) {
+    date = input;
+  } else if (typeof input === 'object' && typeof input.seconds === 'number') {
+    date = new Date(input.seconds * 1000);
+  } else if (typeof input === 'object' && typeof input.toDate === 'function') {
+    date = input.toDate();
+  } else {
+    return '';
+  }
+  if (Number.isNaN(date.getTime())) return '';
+  let hours = date.getHours();
+  const minutes = date.getMinutes();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  const mm = minutes < 10 ? `0${minutes}` : `${minutes}`;
+  return `${hours}:${mm} ${ampm}`;
+}
+
+/**
+ * "Saturday · 1:24 PM" — header line under the greeting.
+ */
+export function formatDayAndTime(date: Date = new Date()): string {
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const day = weekdays[date.getDay()];
+  return `${day} · ${formatMealTime(date)}`;
+}
+
