@@ -4,7 +4,7 @@
     "slug": "CulinAIApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/testflight-square.png",
+    "icon": "./assets/images/testflight.png",
     "scheme": "culinaiapp",
     "userInterfaceStyle": "automatic",
     "ios": {
