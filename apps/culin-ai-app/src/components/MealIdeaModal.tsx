@@ -67,7 +67,7 @@ export function MealIdeaModal({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.kav}
         >
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
@@ -80,79 +80,70 @@ export function MealIdeaModal({
               </Pressable>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.label}>What are you in the mood for?</Text>
-              <View style={styles.inputWrapper}>
-                <MaterialIcons name="search" size={18} color={colors.neutral.gray600} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. high protein, under 30 min..."
-                  placeholderTextColor={colors.neutral.gray300}
-                  value={prompt}
-                  onChangeText={setPrompt}
-                  returnKeyType="done"
-                />
-                {prompt.length > 0 && (
-                  <Pressable onPress={() => setPrompt('')}>
-                    <MaterialIcons name="close" size={16} color={colors.neutral.gray600} />
+            <View style={styles.inputWrapper}>
+              <MaterialIcons name="search" size={18} color={colors.neutral.gray600} />
+              <TextInput
+                style={styles.input}
+                placeholder="What are you in the mood for?"
+                placeholderTextColor={colors.neutral.gray300}
+                value={prompt}
+                onChangeText={setPrompt}
+                returnKeyType="done"
+              />
+              {prompt.length > 0 && (
+                <Pressable onPress={() => setPrompt('')} hitSlop={6}>
+                  <MaterialIcons name="close" size={16} color={colors.neutral.gray600} />
+                </Pressable>
+              )}
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterRow}
+            >
+              {FILTER_CHIPS.map((f) => {
+                const active = filters.includes(f.id);
+                return (
+                  <Pressable
+                    key={f.id}
+                    onPress={() => toggleFilter(f.id)}
+                    style={[styles.filterChip, active && styles.filterChipActive]}
+                  >
+                    <MaterialIcons
+                      name={f.icon as any}
+                      size={14}
+                      color={active ? colors.primary[700] : colors.neutral.gray600}
+                    />
+                    <Text style={[styles.filterText, active && styles.filterTextActive]}>
+                      {f.label}
+                    </Text>
                   </Pressable>
-                )}
-              </View>
-
-              <Text style={styles.label}>Filters</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.filterRow}
-              >
-                {FILTER_CHIPS.map((f) => {
-                  const active = filters.includes(f.id);
-                  return (
-                    <Pressable
-                      key={f.id}
-                      onPress={() => toggleFilter(f.id)}
-                      style={[styles.filterChip, active && styles.filterChipActive]}
-                    >
-                      <MaterialIcons
-                        name={f.icon as any}
-                        size={14}
-                        color={active ? colors.primary[700] : colors.neutral.gray600}
-                      />
-                      <Text style={[styles.filterText, active && styles.filterTextActive]}>
-                        {f.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-
-              <Text style={styles.label}>Complexity</Text>
-              <View style={styles.complexityRow}>
-                {[1, 2, 3, 4, 5].map((n) => {
-                  const active = n === complexity;
-                  return (
-                    <Pressable
-                      key={n}
-                      onPress={() => setComplexity(n)}
-                      style={[styles.complexityCell, active && styles.complexityCellActive]}
-                    >
-                      <Text
-                        style={[
-                          styles.complexityCellText,
-                          active && styles.complexityCellTextActive,
-                        ]}
-                      >
-                        {n}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              <View style={styles.complexityCaption}>
-                <Text style={styles.captionText}>Simple</Text>
-                <Text style={styles.captionText}>Complex</Text>
-              </View>
+                );
+              })}
             </ScrollView>
+
+            <View style={styles.complexityRow}>
+              {[1, 2, 3, 4, 5].map((n) => {
+                const active = n === complexity;
+                return (
+                  <Pressable
+                    key={n}
+                    onPress={() => setComplexity(n)}
+                    style={[styles.complexityCell, active && styles.complexityCellActive]}
+                  >
+                    <Text
+                      style={[
+                        styles.complexityCellText,
+                        active && styles.complexityCellTextActive,
+                      ]}
+                    >
+                      {n}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
 
             <Pressable
               style={[styles.actionBtn, styles.actionPrimary]}
@@ -184,7 +175,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
-    maxHeight: '85%',
     ...shadows.floating,
   },
   handle: {
@@ -199,19 +189,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   title: {
     fontFamily: fontFamily.primaryMedium,
     fontSize: 20,
     color: colors.neutral.blackSoft,
-  },
-  label: {
-    fontFamily: fontFamily.primaryMedium,
-    fontSize: 13,
-    color: colors.neutral.gray600,
-    marginBottom: 8,
-    marginTop: 4,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -221,7 +204,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.button,
     paddingHorizontal: spacing.lg,
     paddingVertical: 12,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   input: {
     flex: 1,
@@ -233,7 +216,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     paddingVertical: 4,
-    marginBottom: spacing.md,
+    paddingRight: spacing.xl,
   },
   filterChip: {
     flexDirection: 'row',
@@ -262,7 +245,8 @@ const styles = StyleSheet.create({
   complexityRow: {
     flexDirection: 'row',
     gap: 6,
-    marginBottom: 6,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
   },
   complexityCell: {
     flex: 1,
@@ -285,16 +269,6 @@ const styles = StyleSheet.create({
   complexityCellTextActive: {
     color: colors.primary[700],
   },
-  complexityCaption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  captionText: {
-    fontFamily: fontFamily.primary,
-    fontSize: 11,
-    color: colors.neutral.gray300,
-  },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -302,7 +276,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 14,
     borderRadius: radius.button,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   actionPrimary: {
     backgroundColor: colors.primary[600],
