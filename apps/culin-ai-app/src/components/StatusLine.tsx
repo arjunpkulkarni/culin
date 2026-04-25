@@ -29,6 +29,7 @@ interface StatusContent {
  */
 function pickStatus(goals: NutritionGoals, totals: DailyTotals): StatusContent {
   const calLeft = Math.max(0, Math.round(goals.calories - totals.calories));
+  const calOver = Math.max(0, Math.round(totals.calories - goals.calories));
   const proteinLeft = Math.max(0, Math.round(goals.protein - totals.protein));
   const carbsLeft = Math.max(0, Math.round(goals.carbs - totals.carbs));
   const fatLeft = Math.max(0, Math.round(goals.fat - totals.fat));
@@ -46,6 +47,23 @@ function pickStatus(goals: NutritionGoals, totals: DailyTotals): StatusContent {
       prefix: '',
       highlight: 'Start your day.',
       suffix: ` ${calLeft} cal to go.`,
+    };
+  }
+
+  // OVER on calories — highest priority once they've eaten enough
+  if (calOver > 0) {
+    // Still missing protein? Mention it because protein-light overshoots happen.
+    if (proteinLeft > 30) {
+      return {
+        prefix: "You're ",
+        highlight: `${calOver} cal over`,
+        suffix: ` and still need ${proteinLeft}g protein.`,
+      };
+    }
+    return {
+      prefix: "You're ",
+      highlight: `${calOver} cal over`,
+      suffix: ` for today.`,
     };
   }
 
@@ -82,12 +100,15 @@ function pickStatus(goals: NutritionGoals, totals: DailyTotals): StatusContent {
 export function StatusLine({ goals, totals }: Props) {
   if (!goals) return null;
   const { prefix, highlight, suffix } = pickStatus(goals, totals);
+  const isOver = goals.calories > 0 && totals.calories > goals.calories;
 
   return (
     <View style={styles.container}>
       <Text style={styles.text}>
         {prefix}
-        <Text style={styles.highlight}>{highlight}</Text>
+        <Text style={[styles.highlight, isOver && styles.highlightWarning]}>
+          {highlight}
+        </Text>
         {suffix}
       </Text>
     </View>
@@ -108,5 +129,8 @@ const styles = StyleSheet.create({
   highlight: {
     fontFamily: fontFamily.primaryMedium,
     color: colors.primary[700],
+  },
+  highlightWarning: {
+    color: colors.semantic.warning,
   },
 });

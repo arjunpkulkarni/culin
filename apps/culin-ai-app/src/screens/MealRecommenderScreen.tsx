@@ -440,7 +440,12 @@ export default function MealRecommenderScreen() {
               <View style={styles.goalsRight}>
                 <View style={styles.goalsTitleRow}>
                   <Text style={styles.goalsTitle}>Daily goals</Text>
-                  <Text style={styles.goalsTotal}>
+                  <Text
+                    style={[
+                      styles.goalsTotal,
+                      dailyTotals.calories > nutritionGoals.calories && styles.goalsTotalOver,
+                    ]}
+                  >
                     {Math.round(dailyTotals.calories)} / {Math.round(nutritionGoals.calories)} cal
                   </Text>
                 </View>
@@ -689,6 +694,10 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.primary,
     fontSize: 12,
     color: colors.neutral.gray300,
+  },
+  goalsTotalOver: {
+    color: colors.semantic.warning,
+    fontFamily: fontFamily.primaryMedium,
   },
   loadingGoals: {
     flexDirection: 'row',

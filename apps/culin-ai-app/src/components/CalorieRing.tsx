@@ -17,9 +17,15 @@ interface Props {
  */
 export function CalorieRing({ consumed, goal, size = 90, thickness = 8 }: Props) {
   const safeGoal = Math.max(1, goal);
+  const isOver = consumed > safeGoal;
+  // When over, show full ring at warning color and big-number = overage.
   const pct = Math.max(0, Math.min(1, consumed / safeGoal));
-  const left = Math.max(0, Math.round(safeGoal - consumed));
   const angle = pct * 360;
+  const bigNumber = isOver
+    ? Math.round(consumed - safeGoal)
+    : Math.round(safeGoal - consumed);
+  const caption = isOver ? 'OVER' : 'LEFT';
+  const arcColor = isOver ? colors.semantic.warning : colors.primary[600];
 
   // Two halves: left half handles 0..180deg, right half handles 180..360deg.
   // Each half uses an inner rotation to expose progress.
@@ -67,8 +73,8 @@ export function CalorieRing({ consumed, goal, size = 90, thickness = 8 }: Props)
                 height: size,
                 borderRadius: size / 2,
                 borderWidth: thickness,
-                borderRightColor: colors.primary[600],
-                borderTopColor: colors.primary[600],
+                borderRightColor: arcColor,
+                borderTopColor: arcColor,
               },
             ]}
           />
@@ -106,8 +112,8 @@ export function CalorieRing({ consumed, goal, size = 90, thickness = 8 }: Props)
                   height: size,
                   borderRadius: size / 2,
                   borderWidth: thickness,
-                  borderRightColor: colors.primary[600],
-                  borderTopColor: colors.primary[600],
+                  borderRightColor: arcColor,
+                  borderTopColor: arcColor,
                 },
               ]}
             />
@@ -117,8 +123,10 @@ export function CalorieRing({ consumed, goal, size = 90, thickness = 8 }: Props)
 
       {/* Center label */}
       <View style={styles.centerLabel} pointerEvents="none">
-        <Text style={styles.bigNumber}>{left.toLocaleString()}</Text>
-        <Text style={styles.caption}>LEFT</Text>
+        <Text style={[styles.bigNumber, isOver && styles.bigNumberOver]}>
+          {bigNumber.toLocaleString()}
+        </Text>
+        <Text style={[styles.caption, isOver && styles.captionOver]}>{caption}</Text>
       </View>
     </View>
   );
@@ -166,11 +174,18 @@ const styles = StyleSheet.create({
     color: colors.neutral.blackSoft,
     lineHeight: 26,
   },
+  bigNumberOver: {
+    color: colors.semantic.warning,
+  },
   caption: {
     fontFamily: fontFamily.primary,
     fontSize: 9,
     letterSpacing: 1.2,
     color: colors.neutral.gray300,
     marginTop: 2,
+  },
+  captionOver: {
+    color: colors.semantic.warning,
+    fontFamily: fontFamily.primaryMedium,
   },
 });

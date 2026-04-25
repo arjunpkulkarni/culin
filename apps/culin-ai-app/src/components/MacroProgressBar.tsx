@@ -20,15 +20,19 @@ export function MacroProgressBar({
   unit = 'g',
   color = colors.primary[600],
 }: Props) {
+  const isOver = goal > 0 && consumed > goal;
   const pct = goal > 0 ? Math.min(1, consumed / goal) : 0;
   const fillWidth = `${Math.round(pct * 100)}%` as const;
+  const fillColor = isOver ? colors.semantic.warning : color;
 
   return (
     <View style={styles.row}>
       <View style={styles.headerRow}>
         <Text style={styles.label}>{label}</Text>
         <Text style={styles.value}>
-          <Text style={styles.consumed}>{Math.round(consumed)}</Text>
+          <Text style={[styles.consumed, isOver && styles.consumedOver]}>
+            {Math.round(consumed)}
+          </Text>
           <Text style={styles.divider}> / </Text>
           <Text style={styles.goal}>
             {Math.round(goal)}
@@ -37,7 +41,7 @@ export function MacroProgressBar({
         </Text>
       </View>
       <View style={styles.track}>
-        <View style={[styles.fill, { width: fillWidth, backgroundColor: color }]} />
+        <View style={[styles.fill, { width: fillWidth, backgroundColor: fillColor }]} />
       </View>
     </View>
   );
@@ -65,6 +69,9 @@ const styles = StyleSheet.create({
   consumed: {
     fontFamily: fontFamily.primaryMedium,
     color: colors.neutral.blackSoft,
+  },
+  consumedOver: {
+    color: colors.semantic.warning,
   },
   divider: {
     color: colors.neutral.gray300,
