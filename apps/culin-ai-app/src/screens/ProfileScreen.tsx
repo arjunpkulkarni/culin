@@ -21,6 +21,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const GOALS = [
   'Lose Weight',
@@ -42,6 +43,7 @@ const HEALTH_CONDITIONS = [
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { userData, logout, updateUserData, deleteAccount, getUserEmail } = useAuth();
 
   const userName = userData?.displayName || 'User';
@@ -234,7 +236,7 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.xs }]}>
         <Pressable onPress={() => router.back()} hitSlop={10} style={styles.headerBtn}>
           <MaterialIcons name="arrow-back-ios-new" size={20} color={colors.neutral.blackSoft} />
         </Pressable>
@@ -488,8 +490,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingTop: 56,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.sm,
   },
   headerBtn: {
     width: 32,
