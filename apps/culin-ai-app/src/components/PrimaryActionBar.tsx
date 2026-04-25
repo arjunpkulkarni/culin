@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -31,6 +32,7 @@ interface Props {
 export function PrimaryActionBar({ primary, secondary }: Props) {
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 12);
+  const isAndroidFallback = Platform.OS === 'android';
 
   return (
     <Animated.View
@@ -38,9 +40,20 @@ export function PrimaryActionBar({ primary, secondary }: Props) {
       style={[styles.wrapper, { paddingBottom: bottomInset }]}
       pointerEvents="box-none"
     >
-      <View style={styles.row}>
-        {secondary && <SecondaryButton action={secondary} />}
-        <PrimaryButton action={primary} expanded={!secondary} />
+      <View style={styles.dockShadow}>
+        <View style={styles.dockClip}>
+          {isAndroidFallback ? (
+            <View style={[StyleSheet.absoluteFill, styles.dockAndroidFill]} />
+          ) : (
+            <BlurView tint="light" intensity={60} style={StyleSheet.absoluteFill} />
+          )}
+          <View style={[StyleSheet.absoluteFill, styles.dockFrost]} />
+          <View pointerEvents="none" style={styles.dockHighlight} />
+          <View style={styles.dockRow}>
+            {secondary && <SecondaryButton action={secondary} />}
+            <PrimaryButton action={primary} expanded={!secondary} />
+          </View>
+        </View>
       </View>
     </Animated.View>
   );
@@ -94,6 +107,10 @@ function SecondaryButton({ action }: { action: PrimaryAction }) {
   );
 }
 
+const DOCK_RADIUS = 32;
+const BTN_HEIGHT = 52;
+const BTN_RADIUS = 26;
+
 const styles = StyleSheet.create({
   wrapper: {
     position: 'absolute',
@@ -103,19 +120,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
   },
-  row: {
+  dockShadow: {
+    borderRadius: DOCK_RADIUS,
+    ...shadows.floating,
+  },
+  dockClip: {
+    borderRadius: DOCK_RADIUS,
+    overflow: 'hidden',
+  },
+  dockAndroidFill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  },
+  dockFrost: {
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+  },
+  dockHighlight: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: DOCK_RADIUS,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.7)',
+  },
+  dockRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
+    padding: 6,
   },
   btnBase: {
-    height: 56,
-    borderRadius: radius.button,
+    height: BTN_HEIGHT,
+    borderRadius: BTN_RADIUS,
     overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    ...shadows.floating,
   },
   btnExpanded: {
     flex: 1,
@@ -124,9 +161,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   btnSecondary: {
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.gray100,
+    backgroundColor: 'transparent',
   },
   btnPressed: {
     opacity: 0.85,
