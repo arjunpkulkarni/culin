@@ -10,9 +10,13 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Install dependencies first (better layer caching)
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies first (better layer caching).
+# requirements-layer1.txt adds the DB-backed parser deps (sqlalchemy, psycopg2,
+# spacy, etc.) needed when DATABASE_URL is set. spaCy needs the en_core_web_sm
+# model for the ingredient parser.
+COPY requirements.txt requirements-layer1.txt ./
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-layer1.txt && \
+    python -m spacy download en_core_web_sm
 
 # Application code and artifacts (required for Layer 1/2/3 and AWS App Runner)
 # Layer 1: artifacts/layer1/lookup_tables.pkl (or Layer 1 loads from DB at startup)
