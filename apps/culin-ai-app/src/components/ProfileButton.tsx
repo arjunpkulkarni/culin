@@ -46,7 +46,7 @@ export function ProfileButton({ name, onPress }: Props) {
   );
 }
 
-const SIZE = 44;
+const SIZE = 52;
 
 const styles = StyleSheet.create({
   button: {
@@ -54,13 +54,17 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.9,
-    transform: [{ scale: 0.96 }],
+    transform: [{ scale: 0.95 }],
   },
   shadowWrap: {
     width: SIZE,
     height: SIZE,
     borderRadius: SIZE / 2,
-    ...shadows.button,
+    shadowColor: colors.primary[700],
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.32,
+    shadowRadius: 14,
+    elevation: 6,
   },
   avatar: {
     width: SIZE,
@@ -69,22 +73,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.85)',
+    borderWidth: 3,
+    borderColor: colors.neutral.white,
   },
   innerHighlight: {
     position: 'absolute',
-    top: -SIZE * 0.4,
-    left: -SIZE * 0.3,
-    width: SIZE * 1.2,
-    height: SIZE * 0.7,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    top: -SIZE * 0.45,
+    left: -SIZE * 0.25,
+    width: SIZE * 1.3,
+    height: SIZE * 0.75,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
     borderRadius: SIZE,
   },
   initial: {
     fontFamily: fontFamily.primaryMedium,
-    fontSize: 17,
+    fontSize: 20,
     color: colors.neutral.white,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
 });
