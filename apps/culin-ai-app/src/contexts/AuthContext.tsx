@@ -6,7 +6,7 @@ import {
   AuthenticationDetails,
   CognitoUserSession,
 } from 'amazon-cognito-identity-js';
-import { userPool, isCognitoConfigured } from '@/src/config/cognito';
+import { userPool, isCognitoConfigured, syncCognitoStorage } from '@/src/config/cognito';
 import { setNutritionApiToken, setTokenRefresher } from '@/src/config/api';
 
 interface AuthContextType {
@@ -117,6 +117,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuth = async () => {
     try {
       console.log('🔐 ========== CHECKING AUTH SESSION ==========');
+      // Hydrate Cognito's in-memory cache from AsyncStorage so a session
+      // saved before the last app kill is visible to getCurrentUser().
+      await syncCognitoStorage();
       const cognitoUser = userPool.getCurrentUser();
       
       if (cognitoUser) {
