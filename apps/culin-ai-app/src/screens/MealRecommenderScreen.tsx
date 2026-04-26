@@ -368,6 +368,7 @@ export default function MealRecommenderScreen() {
             </View>
             <ProfileButton
               name={userName}
+              avatarUrl={userData?.photoURL}
               onPress={() => router.push('/(tabs)/profile' as any)}
             />
           </View>

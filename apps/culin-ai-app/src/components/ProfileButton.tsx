@@ -1,8 +1,8 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors, fontFamily, shadows } from '@/src/design/tokens';
+import { colors, fontFamily } from '@/src/design/tokens';
 
 interface Props {
   /** First or full name; we show the first letter when present. */
@@ -14,11 +14,13 @@ interface Props {
 
 /**
  * Solid primary-green circular profile button for the top-right corner.
- * The high-contrast surface against the mint background reads clearly as
- * an avatar / tappable target.
+ * If an `avatarUrl` is provided we render the photo; otherwise we fall back
+ * to the user's first initial on a green gradient disc.
  */
-export function ProfileButton({ name, onPress }: Props) {
+export function ProfileButton({ name, avatarUrl, onPress }: Props) {
   const initial = (name?.trim()?.[0] ?? '').toUpperCase();
+  const [imgError, setImgError] = useState(false);
+  const showImage = !!avatarUrl && !imgError;
 
   return (
     <Pressable
@@ -27,20 +29,29 @@ export function ProfileButton({ name, onPress }: Props) {
       style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
     >
       <View style={styles.shadowWrap}>
-        <LinearGradient
-          colors={[colors.primary[500], colors.primary[600], colors.primary[700]]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.avatar}
-        >
-          {/* subtle inner highlight at the top to give the disc dimension */}
-          <View pointerEvents="none" style={styles.innerHighlight} />
-          {initial ? (
-            <Text style={styles.initial}>{initial}</Text>
-          ) : (
-            <MaterialIcons name="person" size={22} color={colors.neutral.white} />
-          )}
-        </LinearGradient>
+        {showImage ? (
+          <View style={styles.avatar}>
+            <Image
+              source={{ uri: avatarUrl as string }}
+              style={styles.avatarImg}
+              onError={() => setImgError(true)}
+            />
+          </View>
+        ) : (
+          <LinearGradient
+            colors={[colors.primary[500], colors.primary[600], colors.primary[700]]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.avatar}
+          >
+            <View pointerEvents="none" style={styles.innerHighlight} />
+            {initial ? (
+              <Text style={styles.initial}>{initial}</Text>
+            ) : (
+              <MaterialIcons name="person" size={22} color={colors.neutral.white} />
+            )}
+          </LinearGradient>
+        )}
       </View>
     </Pressable>
   );
@@ -75,6 +86,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 3,
     borderColor: colors.neutral.white,
+    backgroundColor: colors.primary.soft,
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
   },
   innerHighlight: {
     position: 'absolute',

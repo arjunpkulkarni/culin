@@ -236,7 +236,7 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.xs }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <Pressable onPress={() => router.back()} hitSlop={10} style={styles.headerBtn}>
           <MaterialIcons name="arrow-back-ios-new" size={20} color={colors.neutral.blackSoft} />
         </Pressable>
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   headerBtn: {
     width: 32,

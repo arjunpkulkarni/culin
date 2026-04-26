@@ -2,7 +2,7 @@ import { useAuth } from '@/src/contexts/AuthContext';
 import { colors, fontFamily, radius, shadows, spacing } from '@/src/design/tokens';
 import { createCulinAIApi } from '@/src/services/culinaiApi';
 import { estimateFromText, isZeroEstimate, userMessageForError } from '@/src/services/nutritionApi';
-import { saveRecipe } from '@/src/services/recipeStore';
+import { getSavedRecipes, saveRecipe } from '@/src/services/recipeStore';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -53,7 +53,8 @@ export default function MealResultsScreen() {
   const [loading, setLoading] = useState(!savedRecipe);
   const [meal, setMeal] = useState<EnrichedMeal | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [savedToast, setSavedToast] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const parseRecipeDescription = (description: string) => {
     const cleanText = (text: string) =>
@@ -287,9 +288,59 @@ export default function MealResultsScreen() {
     return chips;
   }, [meal]);
 
-  const handleSaveLocal = () => {
-    setSavedToast(true);
-    setTimeout(() => setSavedToast(false), 1600);
+  // Look up whether this recipe is already in the saved list (by name).
+  // Lets us show "Saved" on the button immediately when the user re-opens
+  // a generated recipe (auto-save during fetch already wrote it).
+  useEffect(() => {
+    if (!uid || !meal) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await getSavedRecipes(uid);
+        if (cancelled) return;
+        const exists = list.some((r) => r.name.trim() === meal.name.trim());
+        setIsSaved(exists);
+      } catch {
+        // Best-effort; default to "not saved"
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [uid, meal]);
+
+  const handleSaveLocal = async () => {
+    if (!uid || !meal || saving || isSaved) return;
+    try {
+      setSaving(true);
+      const recipeData: any = {
+        name: meal.name,
+        emoji: '',
+        calories: meal.calories,
+        protein: meal.protein,
+        carbs: meal.carbs,
+        fat: meal.fat,
+        mode,
+        prompt,
+        ingredients: parsed.ingredients,
+        instructions: parsed.instructions,
+        aiDescription: meal.aiDescription || '',
+        complexity,
+      };
+      if (meal.instacartLink) recipeData.instacartLink = meal.instacartLink;
+      if (meal.restaurant) recipeData.restaurant = meal.restaurant;
+      if (meal.prepTime) recipeData.prepTime = meal.prepTime;
+      if (meal.cost) recipeData.cost = meal.cost;
+      if (meal.difficulty) recipeData.difficulty = meal.difficulty;
+      if (meal.deliveryTime) recipeData.deliveryTime = meal.deliveryTime;
+
+      await saveRecipe(uid, recipeData);
+      setIsSaved(true);
+    } catch (e: any) {
+      Alert.alert('Failed to save', e?.message || 'Try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleOrderInstacart = () => {
@@ -322,7 +373,6 @@ export default function MealResultsScreen() {
         </Pressable>
         <View style={styles.headerCenter}>
           <View style={styles.aiPill}>
-            <MaterialIcons name="auto-awesome" size={12} color={colors.primary[700]} />
             <Text style={styles.aiPillText}>AI generated</Text>
           </View>
         </View>
@@ -457,12 +507,31 @@ export default function MealResultsScreen() {
           pointerEvents="box-none"
         >
           <Pressable
-            style={({ pressed }) => [styles.bottomBtn, styles.bottomBtnSecondary, pressed && styles.bottomBtnPressed]}
+            style={({ pressed }) => [
+              styles.bottomBtn,
+              styles.bottomBtnSecondary,
+              pressed && !isSaved && styles.bottomBtnPressed,
+              isSaved && styles.bottomBtnSecondarySaved,
+            ]}
             onPress={handleSaveLocal}
+            disabled={saving || isSaved}
           >
-            <MaterialIcons name="bookmark-outline" size={18} color={colors.neutral.blackSoft} />
-            <Text style={styles.bottomBtnSecondaryText}>
-              {savedToast ? 'Saved' : 'Save recipe'}
+            {saving ? (
+              <ActivityIndicator size="small" color={colors.neutral.blackSoft} />
+            ) : (
+              <MaterialIcons
+                name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                size={18}
+                color={isSaved ? colors.primary[600] : colors.neutral.blackSoft}
+              />
+            )}
+            <Text
+              style={[
+                styles.bottomBtnSecondaryText,
+                isSaved && styles.bottomBtnSecondaryTextSaved,
+              ]}
+            >
+              {isSaved ? 'Saved' : saving ? 'Saving…' : 'Save recipe'}
             </Text>
           </Pressable>
 
@@ -838,6 +907,10 @@ const styles = StyleSheet.create({
   bottomBtnSecondary: {
     backgroundColor: colors.neutral.white,
   },
+  bottomBtnSecondarySaved: {
+    backgroundColor: colors.primary.soft,
+    borderColor: colors.primary[600],
+  },
   bottomBtnDisabled: {
     opacity: 0.5,
   },
@@ -854,5 +927,8 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.primaryMedium,
     fontSize: 15,
     color: colors.neutral.blackSoft,
+  },
+  bottomBtnSecondaryTextSaved: {
+    color: colors.primary[600],
   },
 });
