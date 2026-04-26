@@ -43,23 +43,19 @@ export function SuggestionCard({ suggestion, onLog, onCook }: Props) {
       </Text>
 
       <View style={styles.statsRow}>
-        <Text style={styles.statValue}>
-          {suggestion.protein}g{' '}
-          <Text style={styles.statLabel}>protein</Text>
-        </Text>
-        <View style={styles.statDot} />
-        <Text style={styles.statValue}>
-          {suggestion.calories}{' '}
-          <Text style={styles.statLabel}>cal</Text>
-        </Text>
+        <View style={styles.statItem}>
+          <Text style={styles.statNum}>{suggestion.protein}g</Text>
+          <Text style={styles.statLbl}>protein</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={styles.statNum}>{suggestion.calories}</Text>
+          <Text style={styles.statLbl}>cal</Text>
+        </View>
         {suggestion.prepTime !== undefined && (
-          <>
-            <View style={styles.statDot} />
-            <View style={styles.statTime}>
-              <MaterialIcons name="schedule" size={12} color={colors.neutral.gray600} />
-              <Text style={[styles.statValue, styles.statTimeText]}>{suggestion.prepTime}m</Text>
-            </View>
-          </>
+          <View style={styles.statItem}>
+            <Text style={styles.statNum}>{suggestion.prepTime}m</Text>
+            <Text style={styles.statLbl}>time</Text>
+          </View>
         )}
       </View>
 
@@ -118,7 +114,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral.white,
     borderRadius: radius.cardLarge,
     padding: 16,
-    width: 200,
+    width: 232,
     ...shadows.card,
   },
   header: {
@@ -157,34 +153,25 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14,
   },
-  statValue: {
+  statItem: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  statNum: {
     fontFamily: fontFamily.primaryMedium,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.neutral.blackSoft,
+    letterSpacing: -0.2,
   },
-  statLabel: {
+  statLbl: {
     fontFamily: fontFamily.primary,
+    fontSize: 11,
     color: colors.neutral.gray600,
-    fontWeight: '400',
-  },
-  statTime: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  statTimeText: {
-    color: colors.neutral.gray600,
-  },
-  statDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: colors.neutral.gray300,
+    marginTop: 2,
   },
   buttonRow: {
     flexDirection: 'row',

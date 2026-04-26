@@ -752,7 +752,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 14,
     paddingVertical: 4,
-    paddingRight: 8,
+    paddingRight: 14,
   },
   emptyCard: {
     backgroundColor: colors.neutral.white,
