@@ -1,5 +1,4 @@
 import { useAuth } from '@/src/contexts/AuthContext';
-import { ActionChip, ActionChips } from '@/src/components/ActionChips';
 import { CalorieRing } from '@/src/components/CalorieRing';
 import { MacroProgressBar } from '@/src/components/MacroProgressBar';
 import { MealIdeaModal, type MealIdeaSubmit } from '@/src/components/MealIdeaModal';
@@ -202,26 +201,6 @@ export default function MealRecommenderScreen() {
     }
   };
 
-  const handleRepeatLastMeal = async () => {
-    if (!uid || todaysMeals.length === 0) return;
-    const last = todaysMeals[0];
-    try {
-      const todayISO = formatDateForLog();
-      await saveMeal(uid, {
-        foodName: last.foodName,
-        calories: last.calories,
-        protein: last.protein,
-        carbs: last.carbs,
-        fat: last.fat,
-        mealType: getDefaultMealType(),
-        date: todayISO,
-      });
-      await fetchDailyTotals();
-    } catch (e) {
-      console.error('Failed to repeat meal:', e);
-    }
-  };
-
   const handleRemoveMeal = async (mealId: string | undefined) => {
     if (!uid || !mealId) return;
     try {
@@ -361,38 +340,6 @@ export default function MealRecommenderScreen() {
     return { label: 'Eat next', icon: 'restaurant', onPress: () => openMealIdea() };
   }, [nutritionGoals, dailyTotals]);
 
-  // ----- Action chips -----
-
-  const actionChips: ActionChip[] = useMemo(() => {
-    const chips: ActionChip[] = [
-      {
-        id: 'log',
-        label: 'Log a meal',
-        icon: 'add',
-        variant: 'primary',
-        onPress: () => setQuickLogOpen(true),
-      },
-      {
-        id: 'idea',
-        label: 'Get a meal idea',
-        icon: 'restaurant',
-        variant: 'secondary',
-        onPress: () => openMealIdea(),
-      },
-    ];
-    if (todaysMeals.length > 0) {
-      chips.push({
-        id: 'repeat',
-        label: `Repeat ${todaysMeals[0].mealType.toLowerCase()}`,
-        icon: 'replay',
-        variant: 'secondary',
-        onPress: handleRepeatLastMeal,
-      });
-    }
-    return chips;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [todaysMeals]);
-
   // ----- Render -----
 
   return (
@@ -480,11 +427,6 @@ export default function MealRecommenderScreen() {
             <Text style={styles.loadingText}>Loading your nutrition goals…</Text>
           </View>
         )}
-
-        {/* Action chips */}
-        <Animated.View entering={FadeInDown.duration(220).delay(70)} style={styles.chipsWrapper}>
-          <ActionChips chips={actionChips} />
-        </Animated.View>
 
         {/* Today's Meals */}
         {todaysMeals.length > 0 && (
@@ -728,10 +670,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.primary,
     fontSize: 13,
     color: colors.neutral.gray600,
-  },
-  chipsWrapper: {
-    marginBottom: 32,
-    marginHorizontal: -4,
   },
   section: {
     marginBottom: 32,
