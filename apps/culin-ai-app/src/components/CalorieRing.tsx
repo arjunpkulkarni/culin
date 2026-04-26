@@ -170,10 +170,10 @@ const styles = StyleSheet.create({
   },
   bigNumber: {
     fontFamily: fontFamily.primaryLight,
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '300',
     color: colors.neutral.blackSoft,
-    lineHeight: 32,
+    lineHeight: 26,
     letterSpacing: -0.5,
   },
   bigNumberOver: {

@@ -561,10 +561,7 @@ export default function MealRecommenderScreen() {
             style={styles.section}
           >
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Eat next</Text>
-              <Pressable onPress={() => openMealIdea()}>
-                <Text style={styles.sectionLink}>See more</Text>
-              </Pressable>
+              <Text style={styles.sectionTitle}>Eat next</Text>              
             </View>
             <Text style={styles.sectionSubtitle}>{eatNextSubtitle}</Text>
             <ScrollView
@@ -649,7 +646,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
     paddingTop: 96,
     paddingBottom: 160,
   },
@@ -684,14 +681,14 @@ const styles = StyleSheet.create({
   goalsCard: {
     backgroundColor: colors.neutral.white,
     borderRadius: radius.cardLarge,
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 22,
     marginBottom: 28,
     ...shadows.hero,
   },
   goalsTopRow: {
     flexDirection: 'row',
-    gap: 22,
+    gap: 14,
     alignItems: 'center',
   },
   goalsRight: {
@@ -711,7 +708,7 @@ const styles = StyleSheet.create({
   },
   goalsTotal: {
     fontFamily: fontFamily.primary,
-    fontSize: 11,
+    fontSize: 10,
     color: colors.neutral.gray300,
     letterSpacing: 0.2,
   },
