@@ -21,6 +21,7 @@ import { GradientBackground } from '@/src/components/onboarding/GradientBackgrou
 export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
@@ -392,9 +393,24 @@ export default function AuthScreen() {
                 placeholderTextColor={colors.neutral.gray300}
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+                secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                autoComplete="password"
+                textContentType="password"
               />
+              <Pressable
+                onPress={() => setShowPassword((v) => !v)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                style={styles.passwordToggle}
+              >
+                <MaterialIcons
+                  name={showPassword ? 'visibility-off' : 'visibility'}
+                  size={20}
+                  color={colors.neutral.gray600}
+                />
+              </Pressable>
             </View>
             {isLogin ? (
               <Pressable
@@ -502,6 +518,11 @@ const styles = StyleSheet.create({
   },
   inputIcon: {
     marginRight: spacing.sm,
+  },
+  passwordToggle: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+    marginLeft: spacing.xs,
   },
   input: {
     flex: 1,
