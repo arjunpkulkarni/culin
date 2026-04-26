@@ -79,7 +79,9 @@ export const POST = withAuth(handler);
 
 /**
  * GET /api/user/profile
- * Fetch the current user's profile
+ * Fetch the current user's profile. Auto-creates the row on first
+ * access so newly signed-up users get a profile record without the
+ * mobile app having to call POST separately.
  */
 async function getHandler(req: NextRequest, user: AuthUser) {
   try {
@@ -91,10 +93,36 @@ async function getHandler(req: NextRequest, user: AuthUser) {
     );
 
     if (result.rows.length === 0) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
+      // Lazy onboard: create the row using whatever attributes Cognito
+      // gave us. The user can fill in the rest via PUT.
+      const userEmail = user.email ?? null;
+      try {
+        const created = await query<UserProfile>(
+          `INSERT INTO user_profiles (user_id, email, display_name, onboarding_completed)
+           VALUES ($1, $2, $3, $4)
+           RETURNING *`,
+          [userId, userEmail, null, false]
+        );
+        return NextResponse.json(
+          { success: true, profile: created.rows[0] },
+          { status: 200 }
+        );
+      } catch (insertErr: any) {
+        // Race: another request just inserted. Re-read.
+        if (insertErr?.code === '23505') {
+          const retry = await query<UserProfile>(
+            'SELECT * FROM user_profiles WHERE user_id = $1',
+            [userId]
+          );
+          if (retry.rows.length > 0) {
+            return NextResponse.json(
+              { success: true, profile: retry.rows[0] },
+              { status: 200 }
+            );
+          }
+        }
+        throw insertErr;
+      }
     }
 
     return NextResponse.json(
@@ -226,11 +254,33 @@ async function updateHandler(req: NextRequest, user: AuthUser) {
 
     const result = await query<UserProfile>(updateQuery, values);
 
+    // No row yet: insert one with the provided fields, then return it.
+    // This makes PUT effectively an upsert and means the mobile app can
+    // call it even before GET has lazily created the record.
     if (result.rowCount === 0) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
+      const userEmail = user.email ?? null;
+      try {
+        await query<UserProfile>(
+          `INSERT INTO user_profiles (user_id, email, display_name, onboarding_completed)
+           VALUES ($1, $2, $3, $4)`,
+          [userId, userEmail, displayName ?? null, onboardingCompleted ?? false]
+        );
+        const second = await query<UserProfile>(updateQuery, values);
+        return NextResponse.json(
+          {
+            success: true,
+            message: 'Profile created and updated',
+            profile: second.rows[0],
+          },
+          { status: 200 }
+        );
+      } catch (insertErr) {
+        console.error('Profile upsert insert failed:', insertErr);
+        return NextResponse.json(
+          { error: 'Failed to upsert user profile' },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json(
