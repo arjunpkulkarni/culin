@@ -21,12 +21,7 @@ import { ChipSelector } from '@/src/components/onboarding/ChipSelector';
 import { SliderInput } from '@/src/components/onboarding/SliderInput';
 import { PrimaryButton } from '@/src/components/onboarding/PrimaryButton';
 import { spacing } from '@/src/design/tokens';
-import {
-  cmToFeetInches,
-  feetInchesToCm,
-  kgToPounds,
-  poundsToKg,
-} from '@/src/utils/unitConverters';
+import { feetInchesToCm, poundsToKg } from '@/src/utils/unitConverters';
 
 // Onboarding configuration
 const TOTAL_STEPS = 6;
@@ -64,8 +59,9 @@ export default function OnboardingScreen() {
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [heightCm, setHeightCm] = useState('');
-  const [weightKg, setWeightKg] = useState('');
+  const [heightFeet, setHeightFeet] = useState('');
+  const [heightInches, setHeightInches] = useState('');
+  const [weightLb, setWeightLb] = useState('');
   const [sex, setSex] = useState<'M' | 'F' | 'Other' | ''>('');
   const [activityLevel, setActivityLevel] = useState('');
   const [goals, setGoals] = useState<string[]>([]);
@@ -113,16 +109,24 @@ export default function OnboardingScreen() {
           return false;
         }
         return true;
-      case 3:
-        if (!heightCm.trim() || isNaN(Number(heightCm)) || Number(heightCm) < 50 || Number(heightCm) > 250) {
-          Alert.alert('Invalid', 'Please enter a valid height (50-250 cm)');
+      case 3: {
+        const feet = Number(heightFeet);
+        const inches = heightInches.trim() === '' ? 0 : Number(heightInches);
+        const lb = Number(weightLb);
+        if (!heightFeet.trim() || isNaN(feet) || feet < 3 || feet > 8) {
+          Alert.alert('Invalid', 'Please enter a valid height in feet (3-8)');
           return false;
         }
-        if (!weightKg.trim() || isNaN(Number(weightKg)) || Number(weightKg) < 20 || Number(weightKg) > 300) {
-          Alert.alert('Invalid', 'Please enter a valid weight (20-300 kg)');
+        if (isNaN(inches) || inches < 0 || inches > 11) {
+          Alert.alert('Invalid', 'Inches must be between 0 and 11');
+          return false;
+        }
+        if (!weightLb.trim() || isNaN(lb) || lb < 50 || lb > 700) {
+          Alert.alert('Invalid', 'Please enter a valid weight (50-700 lb)');
           return false;
         }
         return true;
+      }
       case 4:
         if (!sex) {
           Alert.alert('Required', 'Please select an option');
@@ -168,11 +172,16 @@ export default function OnboardingScreen() {
       const today = new Date();
       const age = today.getFullYear() - dob.getFullYear();
 
+      const feet = Number(heightFeet);
+      const inches = heightInches.trim() === '' ? 0 : Number(heightInches);
+      const lb = Number(weightLb);
+
       const userDataToSave: any = {
         displayName: name,
         dateOfBirth: dob.toISOString(),
-        height: Number(heightCm),
-        weight: Number(weightKg),
+        // Backend stores metric; convert from the user's input units.
+        height: feetInchesToCm(feet, inches),
+        weight: poundsToKg(lb),
         sex,
         goals,
         onboardingCompleted: true,
@@ -272,19 +281,34 @@ export default function OnboardingScreen() {
             subtitle="Starting point for your journey"
             icon="straighten"
           >
+            <View style={styles.heightRow}>
+              <View style={styles.heightHalf}>
+                <TextInputCard
+                  placeholder="Feet"
+                  value={heightFeet}
+                  onChangeText={(t) => setHeightFeet(t.replace(/\D/g, '').slice(0, 1))}
+                  keyboardType="number-pad"
+                  icon="height"
+                  maxLength={1}
+                />
+              </View>
+              <View style={styles.heightHalf}>
+                <TextInputCard
+                  placeholder="Inches"
+                  value={heightInches}
+                  onChangeText={(t) => setHeightInches(t.replace(/\D/g, '').slice(0, 2))}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+              </View>
+            </View>
             <TextInputCard
-              placeholder="Height in cm"
-              value={heightCm}
-              onChangeText={setHeightCm}
-              keyboardType="number-pad"
-              icon="height"
-            />
-            <TextInputCard
-              placeholder="Weight in kg"
-              value={weightKg}
-              onChangeText={setWeightKg}
+              placeholder="Weight in lb"
+              value={weightLb}
+              onChangeText={(t) => setWeightLb(t.replace(/\D/g, '').slice(0, 3))}
               keyboardType="number-pad"
               icon="monitor-weight"
+              maxLength={3}
             />
           </QuestionCard>
         );
@@ -420,6 +444,14 @@ const styles = StyleSheet.create({
   optionsContainer: {
     width: '100%',
     gap: spacing.sm,
+  },
+  heightRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
+  },
+  heightHalf: {
+    flex: 1,
   },
   datePickerButton: {
     width: '100%',

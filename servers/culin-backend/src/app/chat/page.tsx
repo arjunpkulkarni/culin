@@ -179,32 +179,31 @@ export default function ChatInterface() {
 
   return (
     <>
-      <style jsx global>{`
-        @keyframes underline-reveal {
-          from {
-            width: 0%;
-          }
-          to {
-            width: 100%;
-          }
-        }
-        .animate-underline-reveal::after {
-          content: '';
-          position: absolute;
-          left: 0;
-          bottom: -6px;
-          height: 1.5px;
-          background-color: currentColor;
-          animation: underline-reveal 0.6s ease-out forwards;
-          animation-delay: 0.2s;
-        }
-        .animation-delay-200 { /* Added for loading animation */
-          animation-delay: 0.2s;
-        }
-        .animation-delay-400 { /* Added for loading animation */
-          animation-delay: 0.4s;
-        }
-      `}</style>
+      {/* Plain <style> tag instead of styled-jsx — Next.js 16 strict TS
+          types reject the `jsx`/`global` props since styled-jsx isn't an
+          explicit dependency. Same runtime effect. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes underline-reveal {
+              from { width: 0%; }
+              to { width: 100%; }
+            }
+            .animate-underline-reveal::after {
+              content: '';
+              position: absolute;
+              left: 0;
+              bottom: -6px;
+              height: 1.5px;
+              background-color: currentColor;
+              animation: underline-reveal 0.6s ease-out forwards;
+              animation-delay: 0.2s;
+            }
+            .animation-delay-200 { animation-delay: 0.2s; }
+            .animation-delay-400 { animation-delay: 0.4s; }
+          `,
+        }}
+      />
       <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="flex flex-col flex-1 min-h-0">
           <div className="sticky top-0 z-10 bg-white/70 backdrop-blur border-b border-gray-200">

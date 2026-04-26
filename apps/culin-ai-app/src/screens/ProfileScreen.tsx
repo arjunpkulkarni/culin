@@ -1,6 +1,6 @@
 import { useAuth } from '@/src/contexts/AuthContext';
 import { colors, fontFamily, radius, shadows, spacing } from '@/src/design/tokens';
-import { calculateAge, getMemberSinceYear } from '@/src/utils/dateUtils';
+import { getMemberSinceYear } from '@/src/utils/dateUtils';
 import {
   cmToFeetInches,
   feetInchesToCm,
@@ -49,7 +49,6 @@ export default function ProfileScreen() {
   const userName = userData?.displayName || 'User';
   const userEmail = getUserEmail() || userData?.email || '';
   const memberSince = getMemberSinceYear(userData?.createdAt);
-  const age = userData?.dateOfBirth ? calculateAge(userData.dateOfBirth) : null;
 
   // Edit state
   const [editingBasic, setEditingBasic] = useState(false);
@@ -288,7 +287,6 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.statsGrid}>
-            <Stat label="Age" value={age ? `${age}` : '—'} />
             <Stat label="Sex" value={userData?.sex || '—'} />
 
             {editingBasic ? (

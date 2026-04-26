@@ -41,32 +41,51 @@ async function handler(req: NextRequest, user: AuthUser) {
       );
     }
 
-    // Create new user profile
-    const result = await query<UserProfile>(
-      `INSERT INTO user_profiles (user_id, email, display_name, onboarding_completed)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [userId, userEmail, displayName || null, false]
-    );
+    // Try to create. If the email already exists under a different user_id
+    // (e.g. an orphaned row from a previous Cognito pool / sub), re-link it
+    // to the current authenticated sub instead of erroring. The Cognito JWT
+    // already proves the caller owns this email, so this is safe.
+    try {
+      const result = await query<UserProfile>(
+        `INSERT INTO user_profiles (user_id, email, display_name, onboarding_completed)
+         VALUES ($1, $2, $3, $4)
+         RETURNING *`,
+        [userId, userEmail, displayName || null, false]
+      );
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'User profile created successfully',
-        profile: result.rows[0]
-      },
-      { status: 201 }
-    );
+      return NextResponse.json(
+        {
+          success: true,
+          message: 'User profile created successfully',
+          profile: result.rows[0]
+        },
+        { status: 201 }
+      );
+    } catch (insertErr: any) {
+      if (insertErr?.code === '23505') {
+        const relinked = await query<UserProfile>(
+          `UPDATE user_profiles
+           SET user_id = $1${displayName ? ', display_name = $3' : ''}
+           WHERE email = $2
+           RETURNING *`,
+          displayName ? [userId, userEmail, displayName] : [userId, userEmail]
+        );
+        if (relinked.rowCount && relinked.rows.length > 0) {
+          return NextResponse.json(
+            {
+              success: true,
+              message: 'User profile re-linked to current Cognito user',
+              profile: relinked.rows[0]
+            },
+            { status: 200 }
+          );
+        }
+      }
+      throw insertErr;
+    }
 
   } catch (error: any) {
     console.error('Error creating user profile:', error);
-    
-    if (error.code === '23505') { // PostgreSQL unique violation
-      return NextResponse.json(
-        { error: 'Email already exists' },
-        { status: 409 }
-      );
-    }
 
     return NextResponse.json(
       { error: 'Failed to create user profile' },
@@ -108,7 +127,7 @@ async function getHandler(req: NextRequest, user: AuthUser) {
           { status: 200 }
         );
       } catch (insertErr: any) {
-        // Race: another request just inserted. Re-read.
+        // Race: another request just inserted with this user_id. Re-read.
         if (insertErr?.code === '23505') {
           const retry = await query<UserProfile>(
             'SELECT * FROM user_profiles WHERE user_id = $1',
@@ -119,6 +138,23 @@ async function getHandler(req: NextRequest, user: AuthUser) {
               { success: true, profile: retry.rows[0] },
               { status: 200 }
             );
+          }
+          // Otherwise the row exists under a *different* user_id with the
+          // same email (orphaned from a prior Cognito pool/sub). The current
+          // JWT proves the caller owns this email, so re-link it.
+          if (userEmail) {
+            const relinked = await query<UserProfile>(
+              `UPDATE user_profiles SET user_id = $1
+               WHERE email = $2
+               RETURNING *`,
+              [userId, userEmail]
+            );
+            if (relinked.rowCount && relinked.rows.length > 0) {
+              return NextResponse.json(
+                { success: true, profile: relinked.rows[0] },
+                { status: 200 }
+              );
+            }
           }
         }
         throw insertErr;
@@ -274,7 +310,27 @@ async function updateHandler(req: NextRequest, user: AuthUser) {
           },
           { status: 200 }
         );
-      } catch (insertErr) {
+      } catch (insertErr: any) {
+        // Email already exists under a different user_id (orphaned row from
+        // a prior Cognito pool/sub). Re-link it to the current authenticated
+        // sub, then re-run the dynamic update.
+        if (insertErr?.code === '23505' && userEmail) {
+          await query(
+            `UPDATE user_profiles SET user_id = $1 WHERE email = $2`,
+            [userId, userEmail]
+          );
+          const second = await query<UserProfile>(updateQuery, values);
+          if (second.rowCount && second.rows.length > 0) {
+            return NextResponse.json(
+              {
+                success: true,
+                message: 'Profile re-linked and updated',
+                profile: second.rows[0],
+              },
+              { status: 200 }
+            );
+          }
+        }
         console.error('Profile upsert insert failed:', insertErr);
         return NextResponse.json(
           { error: 'Failed to upsert user profile' },

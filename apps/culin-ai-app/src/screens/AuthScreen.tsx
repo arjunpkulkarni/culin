@@ -266,23 +266,26 @@ export default function AuthScreen() {
               </Text>
             </View>
             
-            <View style={[styles.inputContainer, emailError ? styles.inputContainerError : null]}>
-              <MaterialIcons 
-                name="verified-user" 
-                size={20} 
-                color={emailError ? colors.semantic.error : colors.neutral.gray300} 
-                style={styles.inputIcon} 
-              />
-              <TextInput
-                style={[styles.input, styles.codeInput]}
-                placeholder="Enter 6-digit code"
-                placeholderTextColor={colors.neutral.gray300}
-                value={verificationCode}
-                onChangeText={(text) => { setVerificationCode(text); setEmailError(''); }}
-                keyboardType="number-pad"
-                maxLength={6}
-              />
-            </View>
+            <TextInput
+              style={[
+                styles.codeInput,
+                !!verificationCode && styles.codeInputActive,
+                emailError ? styles.codeInputError : null,
+              ]}
+              placeholder="------"
+              placeholderTextColor={colors.neutral.gray300}
+              value={verificationCode}
+              onChangeText={(text) => {
+                setVerificationCode(text.replace(/\D/g, '').slice(0, 6));
+                setEmailError('');
+              }}
+              keyboardType="number-pad"
+              maxLength={6}
+              textContentType="oneTimeCode"
+              autoComplete="sms-otp"
+              autoFocus
+              returnKeyType="done"
+            />
             {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
             <Pressable
@@ -570,10 +573,25 @@ const styles = StyleSheet.create({
     color: colors.neutral.blackSoft,
   },
   codeInput: {
-    fontSize: 24,
-    textAlign: 'center',
-    letterSpacing: 8,
+    height: 64,
+    fontFamily: fontFamily.primary,
+    fontSize: 28,
     fontWeight: '600',
+    color: colors.neutral.blackSoft,
+    textAlign: 'center',
+    backgroundColor: colors.neutral.white,
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: colors.neutral.gray100,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.xs,
+    ...shadows.card,
+  },
+  codeInputActive: {
+    letterSpacing: 12,
+  },
+  codeInputError: {
+    borderColor: colors.semantic.error,
   },
   resendButton: {
     marginTop: spacing.md,

@@ -156,13 +156,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setCurrentUser(cognitoUser);
               setIdToken(newIdToken);
               setAccessToken(newAccessToken);
-              
+
+              let hasUserData = false;
               // Load user data from AsyncStorage first
               try {
                 const storedData = await AsyncStorage.getItem(`${USER_DATA_KEY}_${username}`);
                 if (storedData) {
                   const parsedData = JSON.parse(storedData);
                   setUserData(parsedData);
+                  hasUserData = true;
                 }
               } catch (localErr) {
                 if (__DEV__) console.warn('Failed to read local user data:', localErr);
@@ -192,12 +194,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   };
                   
                   await saveUserData(username, transformedData);
+                  hasUserData = true;
                 }
               } catch (syncError) {
                 if (__DEV__) console.warn('Could not fetch profile from backend (using local data):', syncError);
               }
 
-              // Do not create onboarding=false fallback for returning users.
+              // Returning user with a valid session but no profile yet (e.g. they
+              // signed up, never completed onboarding, then reopened the app).
+              // Seed a stub so _layout routes to OnboardingScreen instead of
+              // hanging on the spinner until the 12s timeout.
+              if (!hasUserData) {
+                const stub: UserData = {
+                  displayName: 'User',
+                  email: cognitoUser.getUsername(),
+                  createdAt: new Date().toISOString(),
+                  onboardingCompleted: false,
+                };
+                await saveUserData(username, stub);
+                if (__DEV__) console.log('🆕 Returning user with no profile — seeded onboarding stub');
+              }
             } catch (sessionError) {
               if (__DEV__) console.error('Error processing session:', sessionError);
             } finally {
@@ -363,6 +379,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setError(null);
           
           const username = cognitoUser.getUsername();
+          let hasUserData = false;
           // Load user data from AsyncStorage first
           console.log('📱 Loading user data from local storage...');
           try {
@@ -370,6 +387,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (storedData) {
               const parsedData = JSON.parse(storedData);
               setUserData(parsedData);
+              hasUserData = true;
             }
           } catch (localErr) {
             console.warn('⚠️ Failed to read local user data:', localErr);
@@ -405,13 +423,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               };
               
               await saveUserData(username, transformedData);
+              hasUserData = true;
               console.log('💾 Backend profile synced to local storage');
             }
           } catch (error) {
             console.warn('⚠️ Could not fetch profile from backend (using local data):', error);
           }
-          
-          // Keep spinner behavior controlled by _layout; don't force onboarding=false fallback.
+
+          // First-ever sign-in for this user (no local data, no backend profile —
+          // typical 404 from /api/user/profile). Seed a stub so the root layout
+          // routes to OnboardingScreen instead of hanging on the loading spinner
+          // until LOADING_TIMEOUT_MS fires "Something went wrong".
+          if (!hasUserData) {
+            const stub: UserData = {
+              displayName: 'User',
+              email,
+              createdAt: new Date().toISOString(),
+              onboardingCompleted: false,
+            };
+            await saveUserData(username, stub);
+            console.log('🆕 New user — seeded onboarding stub');
+          }
           
           console.log('✅ Sign in complete! Session will persist until logout.');
           console.log('========================================');
@@ -526,7 +558,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('Has token:', !!idToken);
         const { createCulinAIApi } = await import('@/src/services/culinaiApi');
         const api = createCulinAIApi(idToken);
-        await api.updateUserProfile(updatedData);
+        try {
+          await api.updateUserProfile(updatedData);
+        } catch (putError: any) {
+          // Backend's PUT only updates existing rows. For first-time users
+          // (e.g. completing onboarding) the profile doesn't exist yet, so
+          // fall back to POST (create).
+          const msg = String(putError?.message || '');
+          const isMissing = /not found|404/i.test(msg);
+          if (isMissing) {
+            console.log('ℹ️ Profile does not exist on backend — creating via POST');
+            try {
+              await api.saveUserProfile(updatedData);
+            } catch (postError: any) {
+              const postMsg = String(postError?.message || '');
+              // Orphaned row exists under a different sub (old Cognito pool)
+              // and the deployed backend doesn't yet auto re-link. Treat as
+              // non-fatal: local data is saved, the next backend deploy with
+              // re-link logic will reconcile on the next call.
+              if (/already exists|409/i.test(postMsg)) {
+                console.warn('⚠️ Profile email already exists under a different user_id — skipping backend sync until re-link deploy');
+              } else {
+                throw postError;
+              }
+            }
+          } else {
+            throw putError;
+          }
+        }
         console.log('✅ User profile synced to backend successfully!');
         console.log('========================================');
       } catch (error) {
