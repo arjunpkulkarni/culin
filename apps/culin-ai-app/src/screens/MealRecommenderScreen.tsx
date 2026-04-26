@@ -287,7 +287,7 @@ export default function MealRecommenderScreen() {
     });
     scored.sort((a, b) => b.score - a.score);
 
-    return scored.slice(0, 6).map(({ recipe }) => ({
+    return scored.slice(0, 4).map(({ recipe }) => ({
       id: recipe.id ?? recipe.name,
       name: recipe.name,
       protein: Math.round(recipe.protein),
@@ -506,20 +506,17 @@ export default function MealRecommenderScreen() {
               <Text style={styles.sectionTitle}>Eat next</Text>              
             </View>
             <Text style={styles.sectionSubtitle}>{eatNextSubtitle}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.suggestionsRow}
-            >
+            <View style={styles.suggestionsGrid}>
               {eatNextSuggestions.map((s) => (
-                <SuggestionCard
-                  key={s.id}
-                  suggestion={s}
-                  onLog={handleSuggestionLog}
-                  onCook={handleSuggestionCook}
-                />
+                <View style={styles.suggestionCol} key={s.id}>
+                  <SuggestionCard
+                    suggestion={s}
+                    onLog={handleSuggestionLog}
+                    onCook={handleSuggestionCook}
+                  />
+                </View>
               ))}
-            </ScrollView>
+            </View>
           </Animated.View>
         )}
 
@@ -748,11 +745,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.neutral.offWhite,
   },
-  suggestionsRow: {
+  suggestionsGrid: {
     flexDirection: 'row',
-    gap: 14,
-    paddingVertical: 4,
-    paddingRight: 14,
+    flexWrap: 'wrap',
+    marginHorizontal: -5,
+  },
+  suggestionCol: {
+    width: '50%',
+    paddingHorizontal: 5,
+    marginBottom: 10,
   },
   emptyCard: {
     backgroundColor: colors.neutral.white,

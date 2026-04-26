@@ -29,7 +29,7 @@ export function SuggestionCard({ suggestion, onLog, onCook }: Props) {
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.iconCircle}>
-          <MaterialIcons name={iconName} size={18} color={colors.primary[700]} />
+          <MaterialIcons name={iconName} size={16} color={colors.primary[700]} />
         </View>
         {suggestion.badge && (
           <View style={[styles.badge, badgeStyleFor(suggestion.badge)]}>
@@ -112,9 +112,8 @@ function iconForBadge(badge?: SuggestionBadge): keyof typeof MaterialIcons.glyph
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.neutral.white,
-    borderRadius: radius.cardLarge,
-    padding: 16,
-    width: 232,
+    borderRadius: radius.card,
+    padding: 14,
     ...shadows.card,
   },
   header: {
@@ -124,38 +123,38 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.primary.soft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
   badgeText: {
     fontFamily: fontFamily.primaryMedium,
-    fontSize: 10,
-    letterSpacing: 0.6,
+    fontSize: 9,
+    letterSpacing: 0.5,
     color: colors.primary[700],
   },
   name: {
     fontFamily: fontFamily.primaryMedium,
-    fontSize: 16,
-    lineHeight: 21,
+    fontSize: 14,
+    lineHeight: 18,
     color: colors.neutral.blackSoft,
-    marginBottom: 12,
-    minHeight: 42,
+    marginBottom: 10,
+    minHeight: 36,
     letterSpacing: -0.2,
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 14,
+    marginBottom: 12,
   },
   statItem: {
     flex: 1,
@@ -163,23 +162,23 @@ const styles = StyleSheet.create({
   },
   statNum: {
     fontFamily: fontFamily.primaryMedium,
-    fontSize: 14,
+    fontSize: 12,
     color: colors.neutral.blackSoft,
     letterSpacing: -0.2,
   },
   statLbl: {
     fontFamily: fontFamily.primary,
-    fontSize: 11,
+    fontSize: 10,
     color: colors.neutral.gray600,
     marginTop: 2,
   },
   buttonRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   btn: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: radius.button,
     alignItems: 'center',
     justifyContent: 'center',
@@ -194,7 +193,7 @@ const styles = StyleSheet.create({
   },
   btnText: {
     fontFamily: fontFamily.primaryMedium,
-    fontSize: 14,
+    fontSize: 13,
   },
   btnTextPrimary: {
     color: colors.neutral.white,
