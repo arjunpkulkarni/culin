@@ -77,21 +77,27 @@ export default function AuthScreen() {
   };
 
   async function handleSubmit() {
-    if (!email || !password) {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password;
+    if (!cleanEmail || !cleanPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
+    }
+
+    if (__DEV__) {
+      console.log('[AuthScreen] submit email length:', cleanEmail.length, 'password length:', cleanPassword.length);
     }
 
     setEmailError(''); // Clear previous errors
     setLoading(true);
     try {
       if (isLogin) {
-        await signIn(email, password);
+        await signIn(cleanEmail, cleanPassword);
       } else {
         // For sign up, we'll use a temporary name - it will be updated in onboarding
-        await signUp(email, password, 'User');
+        await signUp(cleanEmail, cleanPassword, 'User');
         // Show verification screen after successful signup
-        setVerificationEmail(email);
+        setVerificationEmail(cleanEmail);
         setShowVerification(true);
         setLoading(false);
         Alert.alert(
@@ -106,7 +112,7 @@ export default function AuthScreen() {
       
       // Check if this is an unverified user error
       if (error?.code === 'UserNotConfirmedException' || error?.message?.includes('not confirmed')) {
-        setVerificationEmail(email);
+        setVerificationEmail(cleanEmail);
         setShowVerification(true);
         setEmailError('');
         setLoading(false);

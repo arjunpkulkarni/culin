@@ -1,3 +1,7 @@
+// Polyfill crypto.getRandomValues for amazon-cognito-identity-js SRP auth.
+// MUST be the first import in the entry so it runs before any Cognito code.
+import 'react-native-get-random-values';
+
 import React, { useState, useEffect } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';

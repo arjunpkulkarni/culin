@@ -342,6 +342,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const cognitoUser = new CognitoUser(userData);
 
+      // Use USER_PASSWORD_AUTH instead of SRP. The SRP flow in
+      // amazon-cognito-identity-js v6 falls back to Math.random() in __DEV__
+      // when global.nativeCallSyncHook is undefined (RN 0.81+ bridgeless),
+      // which produces invalid SRP A values and Cognito rejects with
+      // "Incorrect username or password". USER_PASSWORD_AUTH skips client-side
+      // crypto entirely and sends credentials over TLS.
+      cognitoUser.setAuthenticationFlowType('USER_PASSWORD_AUTH');
+
       cognitoUser.authenticateUser(authenticationDetails, {
         onSuccess: async (session: CognitoUserSession) => {
           console.log('✅ Authentication successful!');
