@@ -1,4 +1,10 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   CognitoUser,
@@ -53,6 +59,56 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USER_DATA_KEY = '@culinai_user_data';
 
+/**
+ * Obtain fresh JWTs from Cognito. When the access token is expired but the
+ * refresh token is still valid, calls refreshSession so API calls can succeed.
+ */
+function refreshCognitoTokens(
+  cognitoUser: CognitoUser,
+): Promise<{ idToken: string; accessToken: string } | null> {
+  return new Promise((resolve) => {
+    cognitoUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
+      if (!session) {
+        resolve(null);
+        return;
+      }
+
+      const finish = (s: CognitoUserSession) => {
+        if (!s.isValid()) {
+          resolve(null);
+          return;
+        }
+        resolve({
+          idToken: s.getIdToken().getJwtToken(),
+          accessToken: s.getAccessToken().getJwtToken(),
+        });
+      };
+
+      if (session.isValid()) {
+        finish(session);
+        return;
+      }
+
+      const refreshToken = session.getRefreshToken();
+      if (!refreshToken) {
+        resolve(null);
+        return;
+      }
+
+      cognitoUser.refreshSession(
+        refreshToken,
+        (reErr: Error | null, newSession: CognitoUserSession | null) => {
+          if (reErr || !newSession) {
+            resolve(null);
+            return;
+          }
+          finish(newSession);
+        },
+      );
+    });
+  });
+}
+
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -71,7 +127,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Check if user is already signed in on app load
   useEffect(() => {
-    checkAuth();
+    void checkAuth();
+    // Intentionally mount-only; checkAuth hydrates Cognito once at startup.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Keep the nutrition-backend token store in sync with auth state
@@ -84,13 +142,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTokenRefresher(() => {
       return new Promise<string>((resolve, reject) => {
         const user = userPool.getCurrentUser();
-        if (!user) { reject(new Error('No user')); return; }
-        user.getSession((err: Error | null, session: CognitoUserSession | null) => {
-          if (err || !session?.isValid()) { reject(err || new Error('Session expired')); return; }
-          const fresh = session.getAccessToken().getJwtToken();
-          setAccessToken(fresh);
-          setIdToken(session.getIdToken().getJwtToken());
-          resolve(fresh);
+        if (!user) {
+          reject(new Error('No user'));
+          return;
+        }
+        refreshCognitoTokens(user).then((tokens) => {
+          if (!tokens) {
+            reject(new Error('Session expired'));
+            return;
+          }
+          setAccessToken(tokens.accessToken);
+          setIdToken(tokens.idToken);
+          resolve(tokens.accessToken);
         });
       });
     });
@@ -116,118 +179,98 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      console.log('🔐 ========== CHECKING AUTH SESSION ==========');
-      // Hydrate Cognito's in-memory cache from AsyncStorage so a session
-      // saved before the last app kill is visible to getCurrentUser().
+      if (__DEV__) console.log('🔐 ========== CHECKING AUTH SESSION ==========');
       await syncCognitoStorage();
       const cognitoUser = userPool.getCurrentUser();
-      
-      if (cognitoUser) {
-        console.log('👤 Found existing user session:', cognitoUser.getUsername());
-        
-        cognitoUser.getSession(async (err: Error | null, session: CognitoUserSession | null) => {
-          const username = cognitoUser.getUsername();
-          if (err || !session?.isValid()) {
-            if (__DEV__) console.warn('Session invalid or error, trying local restore:', err);
-            try {
-              const storedData = await AsyncStorage.getItem(`${USER_DATA_KEY}_${username}`);
-              if (storedData) {
-                setCurrentUser(cognitoUser);
-                setUserData(JSON.parse(storedData));
-              } else {
-                setCurrentUser(null);
-                setIdToken(null);
-                setAccessToken(null);
-                setUserData(null);
-              }
-            } catch {
-              setCurrentUser(null);
-              setIdToken(null);
-              setAccessToken(null);
-              setUserData(null);
-            }
-            setLoading(false);
-          } else {
-            try {
-              if (__DEV__) console.log('Valid session found.');
-              
-              const newIdToken = session.getIdToken().getJwtToken();
-              const newAccessToken = session.getAccessToken().getJwtToken();
-              setCurrentUser(cognitoUser);
-              setIdToken(newIdToken);
-              setAccessToken(newAccessToken);
 
-              let hasUserData = false;
-              // Load user data from AsyncStorage first
-              try {
-                const storedData = await AsyncStorage.getItem(`${USER_DATA_KEY}_${username}`);
-                if (storedData) {
-                  const parsedData = JSON.parse(storedData);
-                  setUserData(parsedData);
-                  hasUserData = true;
-                }
-              } catch (localErr) {
-                if (__DEV__) console.warn('Failed to read local user data:', localErr);
-              }
-              
-              // Try to sync with backend
-              try {
-                const { createCulinAIApi } = await import('@/src/services/culinaiApi');
-                const api = createCulinAIApi(newIdToken);
-                const response = await api.getUserProfile();
-                
-                const backendUserData = response.profile || response;
-                
-                if (backendUserData) {
-                  const transformedData = {
-                    displayName: backendUserData.display_name || backendUserData.displayName,
-                    email: backendUserData.email,
-                    dateOfBirth: backendUserData.date_of_birth,
-                    height: backendUserData.height,
-                    weight: backendUserData.weight,
-                    sex: backendUserData.sex,
-                    goals: backendUserData.goals,
-                    healthConditions: backendUserData.health_conditions,
-                    onboardingCompleted: backendUserData.onboarding_completed,
-                    photoURL: backendUserData.photo_url,
-                    createdAt: backendUserData.created_at,
-                  };
-                  
-                  await saveUserData(username, transformedData);
-                  hasUserData = true;
-                }
-              } catch (syncError) {
-                if (__DEV__) console.warn('Could not fetch profile from backend (using local data):', syncError);
-              }
+      if (!cognitoUser) {
+        if (__DEV__) console.log('ℹ️ No existing session found - user needs to sign in');
+        return;
+      }
 
-              // Returning user with a valid session but no profile yet (e.g. they
-              // signed up, never completed onboarding, then reopened the app).
-              // Seed a stub so _layout routes to OnboardingScreen instead of
-              // hanging on the spinner until the 12s timeout.
-              if (!hasUserData) {
-                const stub: UserData = {
-                  displayName: 'User',
-                  email: cognitoUser.getUsername(),
-                  createdAt: new Date().toISOString(),
-                  onboardingCompleted: false,
-                };
-                await saveUserData(username, stub);
-                if (__DEV__) console.log('🆕 Returning user with no profile — seeded onboarding stub');
-              }
-            } catch (sessionError) {
-              if (__DEV__) console.error('Error processing session:', sessionError);
-            } finally {
-              setLoading(false);
-            }
-          }
-        });
-      } else {
-        console.log('ℹ️ No existing session found - user needs to sign in');
-        console.log('========================================');
-        setLoading(false);
+      if (__DEV__) console.log('👤 Found Cognito user:', cognitoUser.getUsername());
+
+      const tokens = await refreshCognitoTokens(cognitoUser);
+      if (!tokens) {
+        if (__DEV__) {
+          console.warn(
+            'Could not obtain valid Cognito tokens — user must sign in again',
+          );
+        }
+        setCurrentUser(null);
+        setIdToken(null);
+        setAccessToken(null);
+        setUserData(null);
+        return;
+      }
+
+      const username = cognitoUser.getUsername();
+      const newIdToken = tokens.idToken;
+      const newAccessToken = tokens.accessToken;
+
+      setCurrentUser(cognitoUser);
+      setIdToken(newIdToken);
+      setAccessToken(newAccessToken);
+
+      let hasUserData = false;
+      try {
+        const storedData = await AsyncStorage.getItem(`${USER_DATA_KEY}_${username}`);
+        if (storedData) {
+          const parsedData = JSON.parse(storedData);
+          setUserData(parsedData);
+          hasUserData = true;
+        }
+      } catch (localErr) {
+        if (__DEV__) console.warn('Failed to read local user data:', localErr);
+      }
+
+      try {
+        const { createCulinAIApi } = await import('@/src/services/culinaiApi');
+        const api = createCulinAIApi(newIdToken);
+        const response = await api.getUserProfile();
+
+        const backendUserData = response.profile || response;
+
+        if (backendUserData) {
+          const transformedData = {
+            displayName: backendUserData.display_name || backendUserData.displayName,
+            email: backendUserData.email,
+            dateOfBirth: backendUserData.date_of_birth,
+            height: backendUserData.height,
+            weight: backendUserData.weight,
+            sex: backendUserData.sex,
+            goals: backendUserData.goals,
+            healthConditions: backendUserData.health_conditions,
+            onboardingCompleted: backendUserData.onboarding_completed,
+            photoURL: backendUserData.photo_url,
+            createdAt: backendUserData.created_at,
+          };
+
+          await saveUserData(username, transformedData);
+          hasUserData = true;
+        }
+      } catch (syncError) {
+        if (__DEV__) {
+          console.warn(
+            'Could not fetch profile from backend (using local data):',
+            syncError,
+          );
+        }
+      }
+
+      if (!hasUserData) {
+        const stub: UserData = {
+          displayName: 'User',
+          email: cognitoUser.getUsername(),
+          createdAt: new Date().toISOString(),
+          onboardingCompleted: false,
+        };
+        await saveUserData(username, stub);
+        if (__DEV__) console.log('🆕 Returning user with no profile — seeded onboarding stub');
       }
     } catch (error) {
       console.error('❌ Auth check error:', error);
+    } finally {
       setLoading(false);
     }
   };
@@ -467,7 +510,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Sign Out
-  const logout = async () => {
+  const logout = useCallback(async () => {
     console.log('👋 ========== SIGNING OUT ==========');
     const cognitoUser = userPool.getCurrentUser();
     if (cognitoUser) {
@@ -481,7 +524,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     console.log('✅ Successfully signed out. Session cleared.');
     console.log('========================================');
-  };
+  }, []);
 
   // Reset Password (forgot password)
   const resetPassword = (email: string) => {
@@ -514,21 +557,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      cognitoUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
-        if (err || !session) {
-          reject(err || new Error('No session'));
+      refreshCognitoTokens(cognitoUser).then((tokens) => {
+        if (!tokens) {
+          reject(new Error('Session expired'));
           return;
         }
-
-        if (session.isValid()) {
-          const newIdToken = session.getIdToken().getJwtToken();
-          const newAccessToken = session.getAccessToken().getJwtToken();
-          setIdToken(newIdToken);
-          setAccessToken(newAccessToken);
-          resolve();
-        } else {
-          reject(new Error('Session expired'));
-        }
+        setCurrentUser(cognitoUser);
+        setIdToken(tokens.idToken);
+        setAccessToken(tokens.accessToken);
+        resolve();
       });
     });
   };
@@ -663,7 +700,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateUserData,
     deleteAccount,
     refreshSession,
-    isAuthenticated: !!currentUser && !!idToken,
+    isAuthenticated: !!currentUser && !!idToken && !!accessToken,
     getUserEmail,
     getUserId,
   };

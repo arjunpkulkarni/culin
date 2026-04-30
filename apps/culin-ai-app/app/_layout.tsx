@@ -31,11 +31,18 @@ const LOADING_TIMEOUT_MS = 12_000;
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { currentUser, userData, loading, logout } = useAuth();
+  const { currentUser, userData, loading, logout, idToken, accessToken } = useAuth();
   const fontsLoaded = useAppFonts();
   const [timedOut, setTimedOut] = useState(false);
 
   const isBlocked = loading || !fontsLoaded || (currentUser && !userData);
+
+  useEffect(() => {
+    if (loading || !fontsLoaded) return;
+    if (currentUser && (!idToken || !accessToken)) {
+      void logout();
+    }
+  }, [loading, fontsLoaded, currentUser, idToken, accessToken, logout]);
 
   useEffect(() => {
     if (!isBlocked) {
@@ -78,6 +85,10 @@ function RootLayoutNav() {
   }
 
   if (!currentUser) {
+    return <AuthScreen />;
+  }
+
+  if (!idToken || !accessToken) {
     return <AuthScreen />;
   }
 
