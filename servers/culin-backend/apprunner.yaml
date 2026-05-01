@@ -13,7 +13,8 @@ run:
     port: 8080  
   env:
     PORT: 8080    
-    NEXT_PUBLIC_COGNITO_USER_POOL_ID: us-east-1_FnEDXysUj
+    # Must match EXPO_PUBLIC_COGNITO_USER_POOL_ID / nutrition-engine COGNITO_USER_POOL_ID (JWKS 404 = wrong pool).
+    NEXT_PUBLIC_COGNITO_USER_POOL_ID: us-east-1_a8FLRTD6D
     NEXT_PUBLIC_COGNITO_CLIENT_ID: 4kjhqpg1b2u389rljtcdpn85kg
     NEXT_PUBLIC_AWS_REGION: us-east-1    
     APP_BASE_URL: https://api.recipe-gen.culin.ai/

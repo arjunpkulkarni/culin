@@ -18,7 +18,12 @@ import {
   type DailyTotals,
   type MealEntry,
 } from '@/src/services/mealStore';
-import { estimateFromText, isZeroEstimate, userMessageForError } from '@/src/services/nutritionApi';
+import {
+  estimateFromText,
+  isZeroEstimate,
+  logQuickMealLogFailure,
+  userMessageForError,
+} from '@/src/services/nutritionApi';
 import { getSavedRecipes, SavedRecipe } from '@/src/services/recipeStore';
 import { formatDayAndTime, formatMealTime, getGreeting } from '@/src/utils/dateUtils';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -175,8 +180,18 @@ export default function MealRecommenderScreen() {
 
   const handleQuickLogSubmit = async (description: string) => {
     if (!uid) return;
+    const descriptionSnippet = description.trim().slice(0, 120);
+    const logCtx = { uid, descriptionSnippet };
+
     try {
-      const result = await estimateFromText(description);
+      let result;
+      try {
+        result = await estimateFromText(description);
+      } catch (err) {
+        logQuickMealLogFailure(err, { ...logCtx, phase: 'estimate' });
+        throw err;
+      }
+
       if (!result?.macros || isZeroEstimate(result.macros)) {
         Alert.alert(
           'Could not estimate',
@@ -184,17 +199,30 @@ export default function MealRecommenderScreen() {
         );
         return;
       }
+
       const todayISO = formatDateForLog();
-      await saveMeal(uid, {
-        foodName: description,
-        calories: result.macros.calories ?? 0,
-        protein: result.macros.protein ?? 0,
-        carbs: result.macros.carbs ?? 0,
-        fat: result.macros.fat ?? 0,
-        mealType: getDefaultMealType(),
-        date: todayISO,
-      });
-      await fetchDailyTotals();
+      try {
+        await saveMeal(uid, {
+          foodName: description,
+          calories: result.macros.calories ?? 0,
+          protein: result.macros.protein ?? 0,
+          carbs: result.macros.carbs ?? 0,
+          fat: result.macros.fat ?? 0,
+          mealType: getDefaultMealType(),
+          date: todayISO,
+        });
+      } catch (err) {
+        logQuickMealLogFailure(err, { ...logCtx, phase: 'save_meal' });
+        throw err;
+      }
+
+      try {
+        await fetchDailyTotals();
+      } catch (err) {
+        logQuickMealLogFailure(err, { ...logCtx, phase: 'refresh_totals' });
+        throw err;
+      }
+
       setQuickLogOpen(false);
     } catch (err: any) {
       Alert.alert('Failed to log meal', userMessageForError(err));

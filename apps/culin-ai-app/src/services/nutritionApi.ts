@@ -1,6 +1,7 @@
 import {
   isNutritionApiConfigured,
   callBackend,
+  NUTRITION_API_BASE_URL,
   type ApiError,
 } from '@/src/config/api';
 
@@ -109,7 +110,44 @@ export function userMessageForError(err: any): string {
   return err?.message || 'Something went wrong. Please try again.';
 }
 
+/** Which step failed inside Estimate & log (home quick log). */
+export type QuickMealLogPhase = 'estimate' | 'save_meal' | 'refresh_totals';
+
+/**
+ * Structured diagnostics when quick meal logging fails. Uses console.error so
+ * output still appears in release builds (see app/_layout.tsx).
+ */
+export function logQuickMealLogFailure(
+  err: unknown,
+  meta: {
+    uid?: string;
+    descriptionSnippet?: string;
+    phase: QuickMealLogPhase;
+  },
+): void {
+  const e = err as ApiError & { name?: string };
+  const base = String(NUTRITION_API_BASE_URL || '').replace(/\/$/, '');
+  console.error('[CulinAI][QuickMealLog]', {
+    ts: new Date().toISOString(),
+    phase: meta.phase,
+    uid: meta.uid,
+    descriptionSnippet: meta.descriptionSnippet,
+    nutritionEstimateUrl: `${base}/estimate-from-text`,
+    apiStatus: e?.status,
+    apiStage: e?.stage,
+    errorName: e?.name,
+    message: typeof e?.message === 'string' ? e.message : String(err),
+  });
+}
+
 /* ── POST /estimate-from-text (primary) ───────────────────────────── */
+
+/**
+ * Nutrition estimation hits Gemini + layered pipeline; production logs often show
+ * 25–35s latency when Layer 0 retries or falls back. Keep FatSecret/default API
+ * calls on the shorter callBackend default (15s).
+ */
+const ESTIMATE_TIMEOUT_MS = 90_000;
 
 export async function estimateFromText(
   input: string | FreeTextEstimateRequest,
@@ -123,7 +161,10 @@ export async function estimateFromText(
     typeof input === 'string' ? { text: input.trim() } : input;
 
   const raw = await withRetry(() =>
-    callBackend<NutritionEstimateResponse>('/estimate-from-text', { body }),
+    callBackend<NutritionEstimateResponse>('/estimate-from-text', {
+      body,
+      timeoutMs: ESTIMATE_TIMEOUT_MS,
+    }),
   );
 
   return { raw, macros: normaliseMacros(raw) };
@@ -145,7 +186,10 @@ export async function estimateNutrition(
       : input;
 
   const raw = await withRetry(() =>
-    callBackend<NutritionEstimateResponse>('/estimate', { body }),
+    callBackend<NutritionEstimateResponse>('/estimate', {
+      body,
+      timeoutMs: ESTIMATE_TIMEOUT_MS,
+    }),
   );
 
   return { raw, macros: normaliseMacros(raw) };
