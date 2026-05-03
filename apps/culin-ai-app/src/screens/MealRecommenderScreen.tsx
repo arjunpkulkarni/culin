@@ -246,12 +246,14 @@ export default function MealRecommenderScreen() {
   };
 
   const handleMealIdeaSubmit = (params: MealIdeaSubmit) => {
+    const trimmed = params.prompt.trim();
+    if (!trimmed) return;
     setIdeaModalOpen(false);
     router.push({
       pathname: '/meal-results' as any,
       params: {
         mode: 'cook',
-        prompt: params.prompt,
+        prompt: trimmed,
         filters: JSON.stringify(params.filters),
         complexity: params.complexity.toString(),
       },

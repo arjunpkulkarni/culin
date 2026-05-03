@@ -7,7 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -37,18 +37,64 @@ interface EnrichedMeal {
   nutritionUnavailable?: boolean;
 }
 
+/** Expo Router passes many params as `string | string[]`; coerce before use. */
+function paramToString(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value) && typeof value[0] === 'string') return value[0];
+  return '';
+}
+
 export default function MealResultsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
-  const { idToken, getUserId } = useAuth();
+  const { idToken, getUserId, loading: authLoading } = useAuth();
   const uid = getUserId();
 
-  const mode = params.mode as 'cook' | 'order';
-  const prompt = params.prompt as string;
-  const filters = (() => { try { return params.filters ? JSON.parse(params.filters as string) : []; } catch { return []; } })();
-  const complexity = params.complexity ? parseInt(params.complexity as string) : 3;
-  const savedRecipe = (() => { try { return params.savedRecipe ? JSON.parse(params.savedRecipe as string) : null; } catch { return null; } })();
+  const modeParam = paramToString(params.mode);
+  const mode: 'cook' | 'order' = modeParam === 'order' ? 'order' : 'cook';
+
+  const routePromptRaw = paramToString(params.prompt);
+  const effectivePrompt = useMemo(() => routePromptRaw.trim(), [routePromptRaw]);
+
+  const filters = useMemo((): string[] => {
+    try {
+      const raw = params.filters;
+      const s =
+        typeof raw === 'string'
+          ? raw
+          : Array.isArray(raw) && typeof raw[0] === 'string'
+            ? raw[0]
+            : '';
+      if (!s) return [];
+      const parsed = JSON.parse(s) as unknown;
+      return Array.isArray(parsed)
+        ? parsed.filter((x): x is string => typeof x === 'string')
+        : [];
+    } catch {
+      return [];
+    }
+  }, [params.filters]);
+
+  const complexity = useMemo(() => {
+    const raw = parseInt(paramToString(params.complexity) || '', 10);
+    return Number.isFinite(raw) ? raw : 3;
+  }, [params.complexity]);
+
+  const savedRecipe = useMemo(() => {
+    try {
+      const raw = params.savedRecipe;
+      const s =
+        typeof raw === 'string'
+          ? raw
+          : Array.isArray(raw) && typeof raw[0] === 'string'
+            ? raw[0]
+            : '';
+      return s ? JSON.parse(s) : null;
+    } catch {
+      return null;
+    }
+  }, [params.savedRecipe]);
 
   const [loading, setLoading] = useState(!savedRecipe);
   const [meal, setMeal] = useState<EnrichedMeal | null>(null);
@@ -103,16 +149,8 @@ export default function MealResultsScreen() {
     return { ingredients, instructions };
   };
 
-  useEffect(() => {
-    if (savedRecipe) {
-      loadSavedRecipe();
-    } else {
-      fetchRecommendations();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadSavedRecipe = () => {
+  const loadSavedRecipe = useCallback(() => {
+    if (!savedRecipe) return;
     try {
       const enrichedMeal: EnrichedMeal = {
         id: savedRecipe.id || Date.now().toString(),
@@ -136,16 +174,29 @@ export default function MealResultsScreen() {
       };
       setMeal(enrichedMeal);
       setLoading(false);
+      setError(null);
     } catch (e) {
       console.error('Failed to load saved recipe:', e);
       setError('Failed to load recipe');
       setLoading(false);
     }
-  };
+  }, [savedRecipe]);
 
-  const fetchRecommendations = async () => {
-    if (!idToken || !prompt) {
-      setError('Missing authentication or prompt');
+  const fetchRecommendations = useCallback(async () => {
+    if (authLoading) {
+      setLoading(true);
+      setError(null);
+      return;
+    }
+
+    if (!effectivePrompt) {
+      setError('We could not load your meal idea. Go back and add what you’re in the mood for, then try again.');
+      setLoading(false);
+      return;
+    }
+
+    if (!idToken) {
+      setError('Your session expired. Sign in again, then retry.');
       setLoading(false);
       return;
     }
@@ -157,12 +208,12 @@ export default function MealResultsScreen() {
       const api = createCulinAIApi(idToken);
       const modeContext = mode === 'cook' ? 'I want to cook a meal.' : 'I want to order food.';
       const filterContext = filters.length ? `Preferences: ${filters.join(', ')}.` : '';
-      const fullQuery = `${modeContext} ${filterContext} ${prompt}`.trim();
+      const fullQuery = `${modeContext} ${filterContext} ${effectivePrompt}`.trim();
 
       const response = await api.sendChatMessage(fullQuery, { complexity });
       const aiDescription = response.enhancedResponse || '';
 
-      let mealName = prompt;
+      let mealName = effectivePrompt;
       const heading3Match = aiDescription.match(/###\s+(?:Enhanced\s+)?([^\n]+)/i);
       if (heading3Match) {
         mealName = heading3Match[1].trim();
@@ -247,7 +298,7 @@ export default function MealResultsScreen() {
             carbs,
             fat,
             mode,
-            prompt,
+            prompt: effectivePrompt,
             ingredients,
             instructions,
             aiDescription,
@@ -270,7 +321,15 @@ export default function MealResultsScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authLoading, complexity, effectivePrompt, filters, idToken, mode, uid]);
+
+  useEffect(() => {
+    if (savedRecipe) {
+      loadSavedRecipe();
+      return;
+    }
+    void fetchRecommendations();
+  }, [savedRecipe, loadSavedRecipe, fetchRecommendations]);
 
   const parsed = useMemo(
     () => (meal ? parseRecipeDescription(meal.aiDescription || '') : { ingredients: [], instructions: [] }),
@@ -321,7 +380,7 @@ export default function MealResultsScreen() {
         carbs: meal.carbs,
         fat: meal.fat,
         mode,
-        prompt,
+        prompt: effectivePrompt,
         ingredients: parsed.ingredients,
         instructions: parsed.instructions,
         aiDescription: meal.aiDescription || '',

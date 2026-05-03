@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -48,19 +49,38 @@ export function MealIdeaModal({
   const [complexity, setComplexity] = useState(3);
 
   useEffect(() => {
-    if (visible) {
-      setPrompt(initialPrompt);
-      setFilters(initialFilters);
-      setComplexity(3);
-    }
-  }, [visible, initialPrompt]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!visible) return;
+    setPrompt(initialPrompt);
+    setFilters(initialFilters);
+    setComplexity(3);
+  }, [visible, initialPrompt, initialFilters]);
 
   const toggleFilter = (id: string) => {
     setFilters((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
   };
 
+  const canSubmit =
+    Boolean(prompt.trim()) || filters.length > 0;
+
   const handleSubmit = () => {
-    onSubmit({ prompt: prompt.trim(), filters, complexity });
+    const trimmed = prompt.trim();
+    let effectivePrompt = trimmed;
+    if (!effectivePrompt && filters.length > 0) {
+      const parts = filters
+        .map((id) => FILTER_CHIPS.find((c) => c.id === id)?.label?.toLowerCase())
+        .filter(Boolean);
+      if (parts.length > 0) {
+        effectivePrompt = `A satisfying meal idea that is ${parts.join(', ')}`;
+      }
+    }
+    if (!effectivePrompt) {
+      Alert.alert(
+        'Add what you\'re craving',
+        'Tell us what you’re in the mood for, or leave the tags on to use your selected styles.',
+      );
+      return;
+    }
+    onSubmit({ prompt: effectivePrompt, filters, complexity });
   };
 
   const complexityLabel = (n: number) => {
@@ -167,8 +187,13 @@ export function MealIdeaModal({
             </View>
 
             <Pressable
-              style={[styles.actionBtn, styles.actionPrimary]}
+              style={[
+                styles.actionBtn,
+                styles.actionPrimary,
+                !canSubmit && styles.actionPrimaryDisabled,
+              ]}
               onPress={handleSubmit}
+              disabled={!canSubmit}
             >
               <MaterialIcons name="restaurant" size={18} color={colors.neutral.white} />
               <Text style={[styles.actionText, styles.actionTextPrimary]}>Find a recipe</Text>
@@ -317,6 +342,9 @@ const styles = StyleSheet.create({
   },
   actionPrimary: {
     backgroundColor: colors.primary[600],
+  },
+  actionPrimaryDisabled: {
+    opacity: 0.45,
   },
   actionText: {
     fontFamily: fontFamily.primaryMedium,
