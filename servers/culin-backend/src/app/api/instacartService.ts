@@ -44,6 +44,9 @@ const DEFAULT_BASE_URL = 'https://connect.instacart.com';
 const DEV_BASE_URL = 'https://connect.dev.instacart.tools';
 const API_KEY = process.env.INSTACART_API_KEY ?? '';
 
+/** Prevent Instacart from blocking chat completion when the API is slow or hanging. */
+const INSTACART_FETCH_TIMEOUT_MS = 20_000;
+
 const UNIT_MAP: Record<string, string> = {
   g: 'gram',
   gram: 'gram',
@@ -104,6 +107,7 @@ export async function createInstacartRecipePage(body: CreateRecipePageRequestBod
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(INSTACART_FETCH_TIMEOUT_MS),
     });
   };
 

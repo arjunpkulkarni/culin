@@ -43,5 +43,20 @@ LLM_PROVIDER: str = os.environ.get("LLM_PROVIDER", "gemini")
 LLM_API_KEY: Optional[str] = os.environ.get("LLM_API_KEY")
 LLM_MODEL: Optional[str] = os.environ.get("LLM_MODEL")  # provider-specific default when None
 
+# Layer 0 Gemini — spikes in demand cause 429/503; allow longer waits + more retries than old 10s/1-retry defaults.
+GEMINI_TIMEOUT_S: int = max(10, int(os.environ.get("GEMINI_TIMEOUT_S", "45")))
+GEMINI_MAX_RETRIES: int = max(0, int(os.environ.get("GEMINI_MAX_RETRIES", "3")))
+
 # PostgreSQL connection string for user profiles (same RDS instance as Layer 1).
 DATABASE_URL: Optional[str] = os.environ.get("DATABASE_URL")
+
+
+def _env_truthy(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None or raw.strip() == "":
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
+# POST /estimate-from-text — use one Gemini macro estimate (fast v1 UX). Set to 0/false for full Layer 0 + L1–L3 pipeline.
+ESTIMATE_SIMPLE_LLM: bool = _env_truthy("ESTIMATE_SIMPLE_LLM", default=True)

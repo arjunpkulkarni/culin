@@ -50,6 +50,9 @@ interface NutritionGoalsResponse {
   };
 }
 
+/** Chat runs multiple LLM steps + enrichment; default 15s causes false timeouts. */
+const CHAT_REQUEST_TIMEOUT_MS = 180_000;
+
 /**
  * API Service for CulinAI Backend
  * Handles all communication with the AWS App Runner backend
@@ -115,15 +118,19 @@ export class CulinAIApiService {
     query: string,
     options: ChatOptions = {}
   ): Promise<ChatResponse> {
-    return this.makeRequest<ChatResponse>('/api/chat', {
-      method: 'POST',
-      body: JSON.stringify({
-        query,
-        diagnosticCodes: options.diagnosticCodes || [],
-        complexity: options.complexity || 3,
-        healthEffectIds: options.healthEffectIds || undefined,
-      }),
-    });
+    return this.makeRequest<ChatResponse>(
+      '/api/chat',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          query,
+          diagnosticCodes: options.diagnosticCodes || [],
+          complexity: options.complexity || 3,
+          healthEffectIds: options.healthEffectIds || undefined,
+        }),
+      },
+      CHAT_REQUEST_TIMEOUT_MS,
+    );
   }
 
   /**

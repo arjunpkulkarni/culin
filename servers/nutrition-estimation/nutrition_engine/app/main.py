@@ -138,7 +138,7 @@ def root():
         "service": "Nutrition Estimation Engine",
         "version": "2.0.0",
         "endpoints": {
-            "POST /estimate-from-text": "Primary endpoint. Free-text → Layer 0 (LLM+RAG) → L1 → L2 → L3.",
+            "POST /estimate-from-text": "Primary endpoint. Default: one LLM macro estimate (v1). Full Layer 0 + L1→L3 when ESTIMATE_SIMPLE_LLM=false.",
             "POST /estimate": "Structured input → Layer 0 → L1 → L2 → L3.",
             "GET /health": "Liveness check.",
             "GET /ready": "Readiness check (startup complete?).",
@@ -171,7 +171,7 @@ def estimate(req: NutritionRequest, request: Request, _identity: str = Depends(r
 
 @app.post("/estimate-from-text")
 def estimate_from_text(req: FreeTextRequest, request: Request, _identity: str = Depends(require_auth)):
-    """Free-text → Layer 0 (RAG + LLM) → L1 → L2 → L3 pipeline."""
+    """Free-text → macros (default v1: single LLM call; full layered pipeline if ESTIMATE_SIMPLE_LLM=false)."""
     if not getattr(request.app.state, "ready", False):
         return JSONResponse(
             status_code=503,

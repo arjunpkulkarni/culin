@@ -39,6 +39,8 @@ export interface NutritionMacros {
 export interface NutritionEstimateResponse {
   item_name?: string;
   macros?: NutritionMacros;
+  /** Some gateways or older payloads mirror macros here */
+  final_macros?: NutritionMacros;
   calories?: number;
   protein?: number;
   protein_g?: number;
@@ -50,19 +52,83 @@ export interface NutritionEstimateResponse {
   fiber_g?: number;
   confidence?: number;
   serving_size?: string;
+  /** Wrapped payload from some proxies */
+  data?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
-/** Pull flat macros regardless of how the API nests them. */
+function _isMacroRecord(x: unknown): x is Record<string, unknown> {
+  return typeof x === 'object' && x !== null && !Array.isArray(x);
+}
+
+/** Parse API numbers that may arrive as floats or numeric strings from Python / proxies. */
+function _coerceNumber(v: unknown): number {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string') {
+    const n = parseFloat(v.replace(/,/g, '').trim());
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+
+function _field(
+  bag: Record<string, unknown>,
+  root: NutritionEstimateResponse,
+  nestedKeys: string[],
+  rootKeys: string[],
+): number {
+  for (const k of nestedKeys) {
+    const v = bag[k];
+    if (v !== undefined && v !== null) return _coerceNumber(v);
+  }
+  for (const k of rootKeys) {
+    const v = (root as Record<string, unknown>)[k];
+    if (v !== undefined && v !== null) return _coerceNumber(v);
+  }
+  return 0;
+}
+
+/** Pull flat macros for simple-LMM, layered pipeline, flat, or loosely wrapped responses. */
 function normaliseMacros(raw: NutritionEstimateResponse): NutritionMacros {
-  const m = raw.macros ?? {};
+  const root = raw as Record<string, unknown>;
+  let bag: Record<string, unknown> = {};
+
+  if (_isMacroRecord(raw.macros)) bag = raw.macros as Record<string, unknown>;
+  else if (_isMacroRecord(raw.final_macros))
+    bag = raw.final_macros as Record<string, unknown>;
+  else if (raw.data != null && _isMacroRecord(raw.data)) {
+    const d = raw.data as Record<string, unknown>;
+    if (_isMacroRecord(d.macros)) bag = d.macros as Record<string, unknown>;
+    else if (_isMacroRecord(d.final_macros)) bag = d.final_macros as Record<string, unknown>;
+  }
+
+  const r = raw;
   return {
-    calories: Math.round(m.calories ?? raw.calories ?? 0),
-    protein:  Math.round(m.protein  ?? raw.protein  ?? raw.protein_g ?? 0),
-    carbs:    Math.round(m.carbs    ?? raw.carbs    ?? raw.carbs_g   ?? 0),
-    fat:      Math.round(m.fat      ?? raw.fat      ?? raw.fat_g     ?? 0),
-    fiber:    Math.round(m.fiber    ?? raw.fiber    ?? raw.fiber_g   ?? 0),
+    calories: Math.round(
+      _field(bag, r, ['calories', 'kcal'], ['calories', 'kcal'])
+    ),
+    protein: Math.round(
+      _field(bag, r, ['protein', 'protein_g'], ['protein', 'protein_g'])
+    ),
+    carbs: Math.round(
+      _field(bag, r, ['carbs', 'carbohydrates', 'carbs_g'], ['carbs', 'carbs_g'])
+    ),
+    fat: Math.round(
+      _field(bag, r, ['fat', 'fat_g', 'lipid'], ['fat', 'fat_g'])
+    ),
+    fiber: Math.round(
+      _field(bag, r, ['fiber', 'fiber_g'], ['fiber', 'fiber_g'])
+    ),
   };
+}
+
+/** User-facing summary of saved estimate — matches integers written to meal store. */
+export function formatMacrosForLogConfirmation(macros: NutritionMacros): string {
+  const c = Math.round(macros.calories ?? 0);
+  const p = Math.round(macros.protein ?? 0);
+  const carbs = Math.round(macros.carbs ?? 0);
+  const f = Math.round(macros.fat ?? 0);
+  return `${c} cal · ${p} g protein · ${carbs} g carbs · ${f} g fat`;
 }
 
 /** True when every macro is zero — the engine couldn't match anything. */

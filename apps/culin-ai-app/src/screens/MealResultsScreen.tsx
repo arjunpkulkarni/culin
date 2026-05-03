@@ -1,3 +1,4 @@
+import Logo from '@/src/components/Logo';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { colors, fontFamily, radius, shadows, spacing } from '@/src/design/tokens';
 import { createCulinAIApi } from '@/src/services/culinaiApi';
@@ -421,7 +422,7 @@ export default function MealResultsScreen() {
         style={StyleSheet.absoluteFillObject}
       />
 
-      {/* Header */}
+      {/* Header — back left, logo visually centered */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.xs }]}>
         <Pressable
           style={styles.backBtn}
@@ -430,12 +431,10 @@ export default function MealResultsScreen() {
         >
           <MaterialIcons name="arrow-back" size={20} color={colors.neutral.blackSoft} />
         </Pressable>
-        <View style={styles.headerCenter}>
-          <View style={styles.aiPill}>
-            <Text style={styles.aiPillText}>AI generated</Text>
-          </View>
+        <View style={styles.headerLogoCenter} pointerEvents="none">
+          <Logo size={34} />
         </View>
-        <View style={styles.backBtn} />
+        <View style={styles.headerEndSpacer} />
       </View>
 
       <ScrollView
@@ -594,19 +593,19 @@ export default function MealResultsScreen() {
             </Text>
           </Pressable>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.bottomBtn,
-              styles.bottomBtnPrimary,
-              pressed && styles.bottomBtnPressed,
-              !meal.instacartLink && styles.bottomBtnDisabled,
-            ]}
-            onPress={handleOrderInstacart}
-            disabled={!meal.instacartLink}
-          >
-            <MaterialIcons name="shopping-cart" size={18} color={colors.neutral.white} />
-            <Text style={styles.bottomBtnPrimaryText}>Order ingredients</Text>
-          </Pressable>
+          {Boolean(meal.instacartLink?.trim()) && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.bottomBtn,
+                styles.bottomBtnPrimary,
+                pressed && styles.bottomBtnPressed,
+              ]}
+              onPress={handleOrderInstacart}
+            >
+              <MaterialIcons name="shopping-cart" size={18} color={colors.neutral.white} />
+              <Text style={styles.bottomBtnPrimaryText}>Order ingredients</Text>
+            </Pressable>
+          )}
         </View>
       )}
     </View>
@@ -671,24 +670,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...shadows.soft,
   },
-  headerCenter: {
+  headerLogoCenter: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  aiPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.primary.soft,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.full,
-  },
-  aiPillText: {
-    fontFamily: fontFamily.primaryMedium,
-    fontSize: 11,
-    color: colors.primary[700],
-    letterSpacing: 0.4,
+  headerEndSpacer: {
+    width: 36,
+    height: 36,
   },
 
   // Loading / error / empty
@@ -969,9 +958,6 @@ const styles = StyleSheet.create({
   bottomBtnSecondarySaved: {
     backgroundColor: colors.primary.soft,
     borderColor: colors.primary[600],
-  },
-  bottomBtnDisabled: {
-    opacity: 0.5,
   },
   bottomBtnPressed: {
     opacity: 0.85,

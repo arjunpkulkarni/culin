@@ -100,17 +100,13 @@ class EstimationError(Exception):
         self.status_code = status_code
 
 
-def estimate_from_text(
+def _estimate_from_text_layered_pipeline(
     text: str,
     restaurant: Optional[str] = None,
     price: Optional[float] = None,
 ) -> NutritionResponse:
-    """Layer 0 → full pipeline.  Accepts free-text, returns NutritionResponse.
+    """Layer 0 (RAG + LLM) → L1 → L2 → L3. Preserved unchanged for non-v1-simple mode or fallback."""
 
-    If the LLM times out or fails after all retries, falls back to running
-    L1→L2→L3 with the raw text as the description so the request always
-    returns an estimate instead of a 504 error.
-    """
     from layers import layer0
 
     l0_out = None
@@ -164,3 +160,34 @@ def estimate_from_text(
         response["debug"]["layer0_structured"] = None
 
     return response
+
+
+def estimate_from_text(
+    text: str,
+    restaurant: Optional[str] = None,
+    price: Optional[float] = None,
+) -> NutritionResponse:
+    """Free-text → NutritionResponse.
+
+    When ESTIMATE_SIMPLE_LLM is true (default): one Gemini call for macros (v1 UX).
+    On failure or when ESTIMATE_SIMPLE_LLM is false: full Layer 0 + L1→L2→L3 pipeline.
+    """
+    from app.config import ESTIMATE_SIMPLE_LLM
+
+    if ESTIMATE_SIMPLE_LLM:
+        try:
+            from app.simple_llm_macros import estimate_free_text_via_simple_llm
+
+            return estimate_free_text_via_simple_llm(
+                text, restaurant=restaurant, price=price
+            )
+        except Exception as exc:
+            logger.warning(
+                "v1 simple LLM estimate failed for %r (%s); using layered pipeline",
+                text,
+                exc,
+            )
+
+    return _estimate_from_text_layered_pipeline(
+        text, restaurant=restaurant, price=price
+    )

@@ -20,11 +20,12 @@ import {
 } from '@/src/services/mealStore';
 import {
   estimateFromText,
+  formatMacrosForLogConfirmation,
   isZeroEstimate,
   logQuickMealLogFailure,
   userMessageForError,
 } from '@/src/services/nutritionApi';
-import { getSavedRecipes, SavedRecipe } from '@/src/services/recipeStore';
+import { deleteRecipe, getSavedRecipes, SavedRecipe } from '@/src/services/recipeStore';
 import { formatDayAndTime, formatMealTime, getGreeting } from '@/src/utils/dateUtils';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -223,6 +224,9 @@ export default function MealRecommenderScreen() {
         throw err;
       }
 
+      const macroLine = formatMacrosForLogConfirmation(result.macros);
+      console.log('[CulinAI][MealLogged]', macroLine);
+      Alert.alert('Meal logged', macroLine);
       setQuickLogOpen(false);
     } catch (err: any) {
       Alert.alert('Failed to log meal', userMessageForError(err));
@@ -260,9 +264,17 @@ export default function MealRecommenderScreen() {
     });
   };
 
+  const resolveEatNextRecipe = useCallback(
+    (s: Suggestion) =>
+      (s.storedRecipeId ? savedRecipes.find((r) => r.id === s.storedRecipeId) : undefined) ||
+      savedRecipes.find((r) => r.id === s.id) ||
+      savedRecipes.find((r) => r.name === s.name),
+    [savedRecipes],
+  );
+
   const handleSuggestionLog = async (s: Suggestion) => {
     if (!uid) return;
-    const recipe = savedRecipes.find((r) => r.id === s.id);
+    const recipe = resolveEatNextRecipe(s);
     if (!recipe) return;
     try {
       const todayISO = formatDateForLog();
@@ -281,8 +293,24 @@ export default function MealRecommenderScreen() {
     }
   };
 
+  const handleEatNextRemove = async (s: Suggestion) => {
+    if (!uid) return;
+    const recipe = resolveEatNextRecipe(s);
+    if (!recipe?.id) {
+      Alert.alert('Cannot remove', 'This recipe is missing an id. Try again after refreshing.');
+      return;
+    }
+    try {
+      await deleteRecipe(uid, recipe.id);
+      await fetchSavedRecipes();
+    } catch (e) {
+      console.error('Failed to delete saved recipe:', e);
+      Alert.alert('Remove failed', 'Could not remove this recipe. Please try again.');
+    }
+  };
+
   const handleSuggestionCook = (s: Suggestion) => {
-    const recipe = savedRecipes.find((r) => r.id === s.id);
+    const recipe = resolveEatNextRecipe(s);
     if (!recipe) return;
     router.push({
       pathname: '/meal-results' as any,
@@ -319,6 +347,7 @@ export default function MealRecommenderScreen() {
 
     return scored.slice(0, 4).map(({ recipe }) => ({
       id: recipe.id ?? recipe.name,
+      storedRecipeId: recipe.id,
       name: recipe.name,
       protein: Math.round(recipe.protein),
       calories: Math.round(recipe.calories),
@@ -544,6 +573,7 @@ export default function MealRecommenderScreen() {
                     suggestion={s}
                     onLog={handleSuggestionLog}
                     onCook={handleSuggestionCook}
+                    onRemove={handleEatNextRemove}
                   />
                 </View>
               ))}

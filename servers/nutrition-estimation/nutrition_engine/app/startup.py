@@ -57,6 +57,7 @@ def startup(app=None):
     if LLM_API_KEY:
         try:
             from layers.layer0.llm_providers import init_provider
+
             init_provider(LLM_PROVIDER, LLM_API_KEY, LLM_MODEL)
             l0_ok = True
             logger.info("Layer 0: LLM provider '%s' initialised", LLM_PROVIDER)

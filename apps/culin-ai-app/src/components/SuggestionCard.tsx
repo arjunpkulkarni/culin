@@ -14,15 +14,19 @@ export interface Suggestion {
   prepTime?: number;
   /** Optional override for the leading icon. Defaults to icon derived from badge. */
   icon?: keyof typeof MaterialIcons.glyphMap;
+  /** Local storage id when this row maps to a saved recipe (Eat next deletes). */
+  storedRecipeId?: string;
 }
 
 interface Props {
   suggestion: Suggestion;
   onLog: (s: Suggestion) => void;
   onCook: (s: Suggestion) => void;
+  /** When set, shows a dismiss control so the backing saved recipe can be removed. */
+  onRemove?: (s: Suggestion) => void;
 }
 
-export function SuggestionCard({ suggestion, onLog, onCook }: Props) {
+export function SuggestionCard({ suggestion, onLog, onCook, onRemove }: Props) {
   const iconName = suggestion.icon ?? iconForBadge(suggestion.badge);
 
   return (
@@ -31,10 +35,22 @@ export function SuggestionCard({ suggestion, onLog, onCook }: Props) {
         <View style={styles.iconCircle}>
           <MaterialIcons name={iconName} size={16} color={colors.primary[700]} />
         </View>
+        <View style={styles.headerSpacer} />
         {suggestion.badge && (
           <View style={[styles.badge, badgeStyleFor(suggestion.badge)]}>
             <Text style={styles.badgeText}>{suggestion.badge}</Text>
           </View>
+        )}
+        {onRemove && (
+          <Pressable
+            style={styles.removeBtn}
+            onPress={() => onRemove(suggestion)}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Remove recipe from Eat next"
+          >
+            <MaterialIcons name="close" size={16} color={colors.neutral.gray600} />
+          </Pressable>
         )}
       </View>
 
@@ -118,9 +134,23 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 14,
+    gap: 6,
+  },
+  headerSpacer: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 1,
+  },
+  removeBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.neutral.offWhite,
+    flexShrink: 0,
   },
   iconCircle: {
     width: 32,

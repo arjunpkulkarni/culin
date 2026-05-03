@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import { useState, useEffect, useCallback, useRef } from "react";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
-import { estimateFromText, isZeroEstimate, userMessageForError } from "@/src/services/nutritionApi";
+import { estimateFromText, formatMacrosForLogConfirmation, isZeroEstimate, userMessageForError } from "@/src/services/nutritionApi";
 import {
   searchFoods,
   autocompleteFoods,
@@ -178,15 +178,27 @@ import {
           );
         }
 
-        await persistMeal({
-          foodName: text,
+        const macrosSaved = {
           calories: cal,
           protein: prot,
           carbs: carb,
           fat: fatG,
+        };
+        await persistMeal({
+          foodName: text,
+          ...macrosSaved,
           mealType: getDefaultMealType(),
           date: todayISO,
         });
+        const usedNutritionEstimate =
+          isNutritionApiConfigured() &&
+          !estimateFailed &&
+          (cal > 0 || prot > 0 || carb > 0 || fatG > 0);
+        if (usedNutritionEstimate) {
+          const macroLine = formatMacrosForLogConfirmation(macrosSaved);
+          console.log('[CulinAI][MealLogged]', macroLine);
+          Alert.alert('Meal logged', macroLine);
+        }
         setMealInput("");
       } catch (e: any) {
         Alert.alert("Error", userMessageForError(e));
