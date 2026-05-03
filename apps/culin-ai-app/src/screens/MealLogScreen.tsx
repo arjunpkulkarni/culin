@@ -5,12 +5,14 @@ import Logo from "@/src/components/Logo";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { formatDate, getGreeting } from "@/src/utils/dateUtils";
 import { MaterialIcons } from "@expo/vector-icons";
-import { usePathname, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
     ActivityIndicator,
     Alert,
+    Pressable,
     ScrollView,
     StyleSheet,
+    Text,
     TextInput,
     View,
 } from "react-native";
@@ -36,9 +38,38 @@ import {
   type DailyTotals,
 } from "@/src/services/mealStore";
 
-  export default function MealLogScreen() {
-    const router = useRouter();
-    const pathname = usePathname();
+function paramFromRoute(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+  return "";
+}
+
+export type RecipeRoutePayload = {
+  foodName: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+};
+
+function parseRecipeRouteParams(params: Record<string, unknown>): RecipeRoutePayload | null {
+  const foodName = paramFromRoute(params.recipeName).trim();
+  if (!foodName) return null;
+  return {
+    foodName,
+    calories: Math.round(parseFloat(paramFromRoute(params.calories)) || 0),
+    protein: Math.round(parseFloat(paramFromRoute(params.protein)) || 0),
+    carbs: Math.round(parseFloat(paramFromRoute(params.carbs)) || 0),
+    fat: Math.round(parseFloat(paramFromRoute(params.fat)) || 0),
+  };
+}
+
+function recipePayloadKey(p: RecipeRoutePayload): string {
+  return `${p.foodName}|${p.calories}|${p.protein}|${p.carbs}|${p.fat}`;
+}
+
+export default function MealLogScreen() {
+    const routeParams = useLocalSearchParams();
     const { userData, currentUser, getUserId } = useAuth();
     const userName = userData?.displayName || "User";
     const greeting = getGreeting();
@@ -48,6 +79,9 @@ import {
 
     const [mealInput, setMealInput] = useState("");
     const [loading, setLoading] = useState(false);
+    const [recipeFromNavigator, setRecipeFromNavigator] =
+      useState<RecipeRoutePayload | null>(null);
+    const dismissedRecipeKeyRef = useRef<string | null>(null);
     const [meals, setMeals] = useState<MealEntry[]>([]);
     const [totals, setTotals] = useState<DailyTotals>({ calories: 0, protein: 0, carbs: 0, fat: 0, mealCount: 0 });
     const [searchResults, setSearchResults] = useState<FatSecretFood[]>([]);
@@ -71,6 +105,24 @@ import {
     useEffect(() => {
       loadMeals();
     }, [loadMeals]);
+
+    useFocusEffect(
+      useCallback(() => {
+        const raw = routeParams as Record<string, unknown>;
+        const p = parseRecipeRouteParams(raw);
+        if (!p) return;
+        const key = recipePayloadKey(p);
+        if (dismissedRecipeKeyRef.current === key) return;
+        setRecipeFromNavigator(p);
+        setMealInput(p.foodName);
+      }, [
+        routeParams.recipeName,
+        routeParams.calories,
+        routeParams.protein,
+        routeParams.carbs,
+        routeParams.fat,
+      ]),
+    );
 
     // Debounced predictive search as user types
     useEffect(() => {
@@ -112,6 +164,39 @@ import {
         setTotals(computeDailyTotals(updated));
       } catch (e) {
         console.error("Failed to save meal:", e);
+      }
+    };
+
+    const clearRecipeSuggestion = (p: RecipeRoutePayload | null) => {
+      if (p) dismissedRecipeKeyRef.current = recipePayloadKey(p);
+      setRecipeFromNavigator(null);
+    };
+
+    const handleLogRecipeFromRoute = async () => {
+      if (!recipeFromNavigator || !uid) return;
+      setLoading(true);
+      try {
+        const { foodName, calories, protein, carbs, fat } = recipeFromNavigator;
+        await persistMeal({
+          foodName,
+          calories,
+          protein,
+          carbs,
+          fat,
+          mealType: getDefaultMealType(),
+          date: todayISO,
+        });
+        const macrosSaved = { calories, protein, carbs, fat };
+        const macroLine = formatMacrosForLogConfirmation(macrosSaved);
+        console.log('[CulinAI][MealLogged]', macroLine);
+        Alert.alert('Meal logged', macroLine);
+        dismissedRecipeKeyRef.current = recipePayloadKey(recipeFromNavigator);
+        setRecipeFromNavigator(null);
+        setMealInput('');
+      } catch (e: any) {
+        Alert.alert('Error', userMessageForError(e));
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -264,6 +349,45 @@ import {
           contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
         >
+          {/* From recipe sheet — tap to persist exact nutrition */}
+          {recipeFromNavigator !== null ? (
+            <Animated.View entering={FadeInDown.duration(220)} style={styles.recipeFromSheet}>
+              <View style={styles.recipeFromSheetTop}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.recipeFromSheetLabel}>Recipe</Text>
+                  <Text style={styles.recipeFromSheetTitle} numberOfLines={2}>
+                    {recipeFromNavigator.foodName}
+                  </Text>
+                  <Text style={styles.recipeFromSheetMacros}>
+                    {formatMacrosForLogConfirmation(recipeFromNavigator)}
+                  </Text>
+                </View>
+                <Pressable
+                  hitSlop={8}
+                  accessibilityLabel="Dismiss recipe shortcut"
+                  onPress={() => clearRecipeSuggestion(recipeFromNavigator)}
+                >
+                  <MaterialIcons name="close" size={22} color="#64748b" />
+                </Pressable>
+              </View>
+              <AnimatedPressableComponent
+                style={styles.recipeFromSheetBtn}
+                onPress={handleLogRecipeFromRoute}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <MaterialIcons name="post-add" size={20} color="#fff" />
+                    <AnimatedText variant="button" style={styles.recipeFromSheetBtnText}>
+                      Log using recipe totals
+                    </AnimatedText>
+                  </>
+                )}
+              </AnimatedPressableComponent>
+            </Animated.View>
+          ) : null}
+
           {/* Goals */}
           <ScrollView 
             horizontal 
@@ -613,6 +737,31 @@ import {
     kcal: { fontWeight: "800", letterSpacing: -0.2 },
     emptyState: { alignItems: "center", padding: 32, gap: 8 },
     emptyText: { color: "#94a3b8", textAlign: "center" },
+    recipeFromSheet: {
+      marginHorizontal: 16,
+      marginTop: 8,
+      marginBottom: 4,
+      padding: 14,
+      backgroundColor: "#ecfdf5",
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: "#6ee7b7",
+      gap: 12,
+    },
+    recipeFromSheetTop: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+    recipeFromSheetLabel: { fontSize: 11, fontWeight: "700", color: "#047857", letterSpacing: 0.6 },
+    recipeFromSheetTitle: { fontSize: 16, fontWeight: "700", color: "#064e3b", marginTop: 2 },
+    recipeFromSheetMacros: { fontSize: 13, color: "#065f46", marginTop: 6 },
+    recipeFromSheetBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      backgroundColor: "#059669",
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    recipeFromSheetBtnText: { color: "#fff", fontWeight: "700" },
   });
   
   

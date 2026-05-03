@@ -413,6 +413,20 @@ export default function MealResultsScreen() {
     });
   };
 
+  const handleOpenMealLog = () => {
+    if (!meal) return;
+    router.push({
+      pathname: '/meal-log',
+      params: {
+        recipeName: meal.name,
+        calories: String(Math.round(meal.calories)),
+        protein: String(Math.round(meal.protein)),
+        carbs: String(Math.round(meal.carbs)),
+        fat: String(Math.round(meal.fat)),
+      },
+    } as any);
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -591,6 +605,18 @@ export default function MealResultsScreen() {
             >
               {isSaved ? 'Saved' : saving ? 'Saving…' : 'Save recipe'}
             </Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.bottomBtn,
+              styles.bottomBtnLog,
+              pressed && styles.bottomBtnPressed,
+            ]}
+            onPress={handleOpenMealLog}
+          >
+            <MaterialIcons name="post-add" size={18} color={colors.neutral.blackSoft} />
+            <Text style={styles.bottomBtnSecondaryText}>Log meal</Text>
           </Pressable>
 
           {Boolean(meal.instacartLink?.trim()) && (
@@ -954,6 +980,11 @@ const styles = StyleSheet.create({
   },
   bottomBtnSecondary: {
     backgroundColor: colors.neutral.white,
+  },
+  bottomBtnLog: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1,
+    borderColor: colors.neutral.blackSoft,
   },
   bottomBtnSecondarySaved: {
     backgroundColor: colors.primary.soft,
