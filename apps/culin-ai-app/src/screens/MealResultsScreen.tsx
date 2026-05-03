@@ -432,7 +432,7 @@ export default function MealResultsScreen() {
           <MaterialIcons name="arrow-back" size={20} color={colors.neutral.blackSoft} />
         </Pressable>
         <View style={styles.headerLogoCenter} pointerEvents="none">
-          <Logo size={34} />
+          <Logo size={54} />
         </View>
         <View style={styles.headerEndSpacer} />
       </View>

@@ -5,12 +5,11 @@ interface LogoProps {
   style?: any;
 }
 
-export default function Logo({ size = 32, style }: LogoProps) {
-  // Using the app icon as logo - you can replace this with your actual logo
+export default function Logo({ size = 44, style }: LogoProps) {
   return (
     <View style={[styles.container, style]}>
       <Image
-        source={require('@/assets/images/icon.png')}
+        source={require('@/assets/images/culinAI.png')}
         style={[styles.logo, { width: size, height: size }]}
         resizeMode="contain"
       />

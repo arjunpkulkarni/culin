@@ -246,7 +246,7 @@ import {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Logo size={28} style={styles.logo} />
+            <Logo size={40} style={styles.logo} />
             <View style={styles.headerText}>
               <AnimatedText variant="caption" delay={100}>{greeting},</AnimatedText>
               <View style={styles.row}>

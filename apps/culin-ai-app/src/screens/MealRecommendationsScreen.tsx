@@ -64,7 +64,7 @@ export default function MealRecommendationsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Logo size={28} style={styles.logo} />
+          <Logo size={40} style={styles.logo} />
           <View>
             <Text style={styles.dateText}>{todayDate}, Today</Text>
             <Text style={styles.greetingText}>{greeting}, {userName}</Text>
