@@ -33,6 +33,7 @@ import {
   getMealsByDate,
   deleteMeal,
   computeDailyTotals,
+  sortMealsNewestFirst,
   DEFAULT_TARGETS,
   type MealEntry,
   type DailyTotals,
@@ -157,9 +158,10 @@ export default function MealLogScreen() {
     const persistMeal = async (entry: Omit<MealEntry, 'id' | 'createdAt'>) => {
       if (!uid) return;
       try {
+        const createdAt = new Date().toISOString();
         const id = await saveMeal(uid, entry);
-        const newEntry: MealEntry = { ...entry, id };
-        const updated = [newEntry, ...meals];
+        const newEntry: MealEntry = { ...entry, id, createdAt };
+        const updated = sortMealsNewestFirst([newEntry, ...meals]);
         setMeals(updated);
         setTotals(computeDailyTotals(updated));
       } catch (e) {

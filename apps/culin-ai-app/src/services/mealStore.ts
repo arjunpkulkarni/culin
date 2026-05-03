@@ -47,6 +47,34 @@ function mealsCollection(uid: string) {
   return collection(db, 'users', uid, 'meals');
 }
 
+/** Milliseconds used to sort logged meals (newest first). */
+function mealLoggedAtMs(m: MealEntry): number {
+  const c = m.createdAt;
+  if (c != null) {
+    if (typeof c === 'string') {
+      const t = Date.parse(c);
+      if (Number.isFinite(t)) return t;
+    }
+    if (typeof c === 'object' && c !== null) {
+      const o = c as { toMillis?: () => number; seconds?: number };
+      if (typeof o.toMillis === 'function') return o.toMillis();
+      if (typeof o.seconds === 'number') return o.seconds * 1000;
+    }
+  }
+  const idNum = Number(m.id);
+  return Number.isFinite(idNum) ? idNum : 0;
+}
+
+/** Stable order: newest logged first (matches Firestore intent: orderBy createdAt desc). */
+export function sortMealsNewestFirst(meals: MealEntry[]): MealEntry[] {
+  return [...meals].sort((a, b) => {
+    const tb = mealLoggedAtMs(b);
+    const ta = mealLoggedAtMs(a);
+    if (tb !== ta) return tb - ta;
+    return String(b.id ?? '').localeCompare(String(a.id ?? ''));
+  });
+}
+
 // ===== LOCAL STORAGE FUNCTIONS =====
 
 function getCurrentMonthPrefix(): string {
@@ -126,8 +154,9 @@ async function saveMealLocal(uid: string, meal: Omit<MealEntry, 'id' | 'createdA
 async function getMealsByDateLocal(uid: string, date: string): Promise<MealEntry[]> {
   try {
     const meals = await pruneAndSyncMonthlyData(uid);
-    // Filter by date
-    return meals.filter(m => m.date === date);
+    // Filter by date, then deterministic sort (storage order alone is unreliable).
+    const forDay = meals.filter((m) => m.date === date);
+    return sortMealsNewestFirst(forDay);
   } catch (e) {
     console.error('Failed to load meals from local storage:', e);
     return [];
