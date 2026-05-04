@@ -1,4 +1,4 @@
-"""Straight-through pipeline: Layer 0 (optional) → Layer 1 → Layer 2 → Layer 3."""
+"""Straight-through pipeline: Layer 1 → Layer 2 → Layer 3 (optional; default off in app.config)."""
 
 import logging
 from typing import Optional
@@ -45,7 +45,9 @@ def _check_layer3_output(data: dict) -> Layer3Output:
 
 
 def estimate_nutrition(req: NutritionRequest) -> NutritionResponse:
-    # Split once — reused by Layer 1 (via _build_ingredients) and Layer 3
+    from app.config import ENABLE_LAYER3
+
+    # Split once — reused by Layer 1 (via _build_ingredients) and Layer 3 (when enabled)
     ingredient_names = layer1._split_description(req.get("description", ""))
 
     # 1️⃣ Layer 1 — baseline estimate (cooking_method used for retention factors)
@@ -67,27 +69,58 @@ def estimate_nutrition(req: NutritionRequest) -> NutritionResponse:
     )
     l2_out = _check_layer2_output(l2_out)
 
-    # 3️⃣ Layer 3 — similarity refinement (input = L2 output shape)
+    # 3️⃣ Layer 3 — similarity refinement (optional; skipped when ENABLE_LAYER3 is false)
     l3_out = layer3.apply_layer3(l2_out, ingredients=ingredient_names)
     l3_out = _check_layer3_output(l3_out)
 
-    # Confidence aggregation (fixed v1 rule)
-    confidence = (
-        0.5 * l1_out.get("confidence", 1.0)
-        + 0.3 * l2_out.get("layer2_confidence", 1.0)
-        + 0.2 * l3_out.get("layer3_confidence", 1.0)
+    l1_c = float(l1_out.get("confidence", 1.0) or 1.0)
+    l2_c = float(l2_out.get("layer2_confidence", 1.0) or 1.0)
+    l3_c = float(l3_out.get("layer3_confidence", 1.0) or 1.0)
+    if ENABLE_LAYER3:
+        confidence = 0.5 * l1_c + 0.3 * l2_c + 0.2 * l3_c
+    else:
+        confidence = (0.5 * l1_c + 0.3 * l2_c) / 0.8
+
+    from app.macro_llm_polish import maybe_polish_macros_with_llm
+    from app.macro_plausibility import (
+        assert_plausible_macros_for_response,
+        reconcile_calories_to_macros,
     )
+    from app.staple_macro_sanity import correct_macros_for_staples
+
+    raw_macros = dict(l3_out["final_macros"])
+    staple_corrected = correct_macros_for_staples(
+        req.get("item_name", ""),
+        req.get("description", ""),
+        raw_macros,
+    )
+    fixed_macros = reconcile_calories_to_macros(staple_corrected)
+    debug_out = {
+        "layer1_macros": l1_out.get("macros"),
+        "layer2_macros": l2_out.get("macros"),
+        "layer3_macros": l3_out.get("final_macros"),
+        "layer2_adjustments": l2_out.get("applied_adjustments"),
+        "layer3_refinements": l3_out.get("refinements_applied"),
+    }
+    if staple_corrected != raw_macros:
+        debug_out["staple_macro_override"] = {"before": raw_macros, "after": staple_corrected}
+    if fixed_macros != staple_corrected:
+        debug_out["calorie_atwater_reconcile"] = {
+            "before": staple_corrected.get("calories"),
+            "after": fixed_macros.get("calories"),
+        }
+
+    blob = " ".join(x for x in (req.get("item_name", ""), req.get("description", "")) if x).strip()
+    fixed_macros, polish_meta = maybe_polish_macros_with_llm(fixed_macros, blob)
+    if polish_meta is not None:
+        debug_out["llm_macro_polish"] = polish_meta
+
+    assert_plausible_macros_for_response(fixed_macros, blob)
 
     return {
-        "macros": l3_out["final_macros"],
+        "macros": fixed_macros,
         "confidence": confidence,
-        "debug": {
-            "layer1_macros": l1_out.get("macros"),
-            "layer2_macros": l2_out.get("macros"),
-            "layer3_macros": l3_out.get("final_macros"),
-            "layer2_adjustments": l2_out.get("applied_adjustments"),
-            "layer3_refinements": l3_out.get("refinements_applied"),
-        },
+        "debug": debug_out,
     }
 
 
@@ -105,7 +138,7 @@ def _estimate_from_text_layered_pipeline(
     restaurant: Optional[str] = None,
     price: Optional[float] = None,
 ) -> NutritionResponse:
-    """Layer 0 (RAG + LLM) → L1 → L2 → L3. Preserved unchanged for non-v1-simple mode or fallback."""
+    """Layer 0 (RAG + LLM) → L1 → L2 (→ L3 only if NUTRITION_ENABLE_LAYER3=1)."""
 
     from layers import layer0
 
@@ -147,7 +180,7 @@ def _estimate_from_text_layered_pipeline(
             "cooking_method": l0_out.get("cooking_method"),
         }
     else:
-        # Fallback: treat the raw text as a structured request so L1→L2→L3 still runs.
+        # Fallback: treat the raw text as a structured request so L1→L2 still runs.
         req = {"item_name": text, "description": text}
         if restaurant:
             req["restaurant"] = restaurant
@@ -169,18 +202,31 @@ def estimate_from_text(
 ) -> NutritionResponse:
     """Free-text → NutritionResponse.
 
-    When ESTIMATE_SIMPLE_LLM is true (default): one Gemini call for macros (v1 UX).
-    On failure or when ESTIMATE_SIMPLE_LLM is false: full Layer 0 + L1→L2→L3 pipeline.
+    When ESTIMATE_SIMPLE_LLM is true: one Gemini call for macros (fast v1).
+    Default (false): Layer 0 + L1→L2 (L3 off unless NUTRITION_ENABLE_LAYER3=1). On simple-LLM failure: same.
     """
     from app.config import ESTIMATE_SIMPLE_LLM
 
     if ESTIMATE_SIMPLE_LLM:
         try:
-            from app.simple_llm_macros import estimate_free_text_via_simple_llm
-
-            return estimate_free_text_via_simple_llm(
-                text, restaurant=restaurant, price=price
+            from app.macro_llm_polish import maybe_polish_macros_with_llm
+            from app.macro_plausibility import (
+                assert_plausible_macros_for_response,
+                reconcile_calories_to_macros,
             )
+            from app.simple_llm_macros import estimate_free_text_via_simple_llm
+            from app.staple_macro_sanity import correct_macros_for_staples
+
+            r = estimate_free_text_via_simple_llm(text, restaurant=restaurant, price=price)
+            hint = str((r.get("debug") or {}).get("item_name_hint") or "")
+            r["macros"] = reconcile_calories_to_macros(
+                correct_macros_for_staples(hint, text, r["macros"])
+            )
+            r["macros"], polish_meta = maybe_polish_macros_with_llm(r["macros"], text)
+            if polish_meta is not None:
+                r.setdefault("debug", {})["llm_macro_polish"] = polish_meta
+            assert_plausible_macros_for_response(r["macros"], text)
+            return r
         except Exception as exc:
             logger.warning(
                 "v1 simple LLM estimate failed for %r (%s); using layered pipeline",

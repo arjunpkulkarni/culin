@@ -1,8 +1,16 @@
 import Logo from '@/src/components/Logo';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { colors, fontFamily, radius, shadows, spacing } from '@/src/design/tokens';
+import { isNutritionApiConfigured } from '@/src/config/api';
 import { createCulinAIApi } from '@/src/services/culinaiApi';
-import { estimateFromText, isZeroEstimate, userMessageForError } from '@/src/services/nutritionApi';
+import {
+  estimateFromText,
+  estimateNutrition,
+  isImplausibleMacros,
+  isZeroEstimate,
+  type NutritionMacros,
+  userMessageForError,
+} from '@/src/services/nutritionApi';
 import { getSavedRecipes, saveRecipe } from '@/src/services/recipeStore';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -228,45 +236,112 @@ export default function MealResultsScreen() {
         .replace(/###\s*/g, '')
         .trim();
 
+      const { ingredients } = parseRecipeDescription(aiDescription);
+      const ingredientLine =
+        ingredients.length > 0
+          ? ingredients
+              .map((l) => l.replace(/^[-•\d.\s]+/, '').trim())
+              .filter(Boolean)
+              .join('\n')
+          : '';
+
       let calories = 0;
       let protein = 0;
       let carbs = 0;
       let fat = 0;
-
-      const nutritionMatch1 = aiDescription.match(
-        /###\s*Nutritional Information[\s\S]*?-\s*\*\*Protein\*\*:\s*Approximately\s*(\d+)\s*grams[\s\S]*?-\s*\*\*Fats\*\*:\s*Approximately\s*(\d+)\s*grams/i
-      );
-      const nutritionMatch2 = aiDescription.match(
-        /\*\*Nutrition Information[^:]*:\*\*[\s\S]*?- Calories:\s*Approximately\s*(\d+)\s*kcal[\s\S]*?- Protein:\s*(\d+)g[\s\S]*?- Carbohydrates:\s*(\d+)g[\s\S]*?- Fat:\s*(\d+)g/i
-      );
-
-      if (nutritionMatch1) {
-        protein = parseInt(nutritionMatch1[1]) || 0;
-        fat = parseInt(nutritionMatch1[2]) || 0;
-        calories = Math.round(protein * 4 + fat * 9);
-        carbs = 2;
-      } else if (nutritionMatch2) {
-        calories = parseInt(nutritionMatch2[1]) || 0;
-        protein = parseInt(nutritionMatch2[2]) || 0;
-        carbs = parseInt(nutritionMatch2[3]) || 0;
-        fat = parseInt(nutritionMatch2[4]) || 0;
-      }
-
       let nutritionUnavailable = false;
-      if (!nutritionMatch1 && !nutritionMatch2) {
+
+      const setFromMacros = (m: NutritionMacros) => {
+        calories = Math.round(m.calories ?? 0);
+        protein = Math.round(m.protein ?? 0);
+        carbs = Math.round(m.carbs ?? 0);
+        fat = Math.round(m.fat ?? 0);
+      };
+
+      const nutritionTextContext = [
+        mealName,
+        effectivePrompt,
+        ingredientLine,
+        aiDescription.slice(0, 8000),
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      const engineMacrosOk = (m: NutritionMacros | undefined | null) =>
+        Boolean(m && !isZeroEstimate(m) && !isImplausibleMacros(m, nutritionTextContext));
+
+      const readSnapshot = (): NutritionMacros => ({
+        calories,
+        protein,
+        carbs,
+        fat,
+      });
+
+      if (isNutritionApiConfigured()) {
         try {
-          const result = await estimateFromText(`${mealName}. ${aiDescription}`);
-          if (result?.macros && !isZeroEstimate(result.macros)) {
-            calories = result.macros.calories ?? 0;
-            protein = result.macros.protein ?? 0;
-            carbs = result.macros.carbs ?? 0;
-            fat = result.macros.fat ?? 0;
-          } else {
-            nutritionUnavailable = true;
+          const structuredDesc =
+            ingredientLine ||
+            `${effectivePrompt}\n${mealName}\n\n${aiDescription}`.replace(/\s{2,}/g, ' ').trim().slice(0, 12000);
+          const structured = await estimateNutrition({
+            item_name: mealName,
+            description: structuredDesc,
+          });
+          if (engineMacrosOk(structured?.macros)) {
+            setFromMacros(structured!.macros);
           }
         } catch (err: any) {
-          console.warn('Nutrition Engine error:', userMessageForError(err));
-          nutritionUnavailable = true;
+          console.warn('Nutrition engine POST /estimate:', userMessageForError(err));
+        }
+
+        if (!engineMacrosOk(readSnapshot())) {
+          try {
+            const freeBlob = `${mealName}.\n${ingredientLine ? `Ingredients:\n${ingredientLine}\n\n` : ''}${aiDescription}`.slice(
+              0,
+              14000,
+            );
+            const free = await estimateFromText(freeBlob);
+            if (engineMacrosOk(free?.macros)) {
+              setFromMacros(free!.macros);
+            }
+          } catch (err: any) {
+            console.warn('Nutrition engine POST /estimate-from-text:', userMessageForError(err));
+          }
+        }
+      }
+
+      if (!engineMacrosOk(readSnapshot())) {
+        const nutritionMatch1 = aiDescription.match(
+          /###\s*Nutritional Information[\s\S]*?-\s*\*\*Protein\*\*:\s*Approximately\s*(\d+)\s*grams[\s\S]*?-\s*\*\*Fats\*\*:\s*Approximately\s*(\d+)\s*grams/i
+        );
+        const nutritionMatch2 = aiDescription.match(
+          /\*\*Nutrition Information[^:]*:\*\*[\s\S]*?- Calories:\s*Approximately\s*(\d+)\s*kcal[\s\S]*?- Protein:\s*(\d+)g[\s\S]*?- Carbohydrates:\s*(\d+)g[\s\S]*?- Fat:\s*(\d+)g/i
+        );
+
+        if (nutritionMatch2) {
+          calories = parseInt(nutritionMatch2[1], 10) || 0;
+          protein = parseInt(nutritionMatch2[2], 10) || 0;
+          carbs = parseInt(nutritionMatch2[3], 10) || 0;
+          fat = parseInt(nutritionMatch2[4], 10) || 0;
+        } else if (nutritionMatch1) {
+          protein = parseInt(nutritionMatch1[1], 10) || 0;
+          fat = parseInt(nutritionMatch1[2], 10) || 0;
+          calories = Math.round(protein * 4 + fat * 9);
+          carbs = Math.round(Math.max(0, (calories - protein * 4 - fat * 9) / 4));
+        }
+      }
+
+      if (isZeroEstimate(readSnapshot())) {
+        nutritionUnavailable = true;
+      } else if (isNutritionApiConfigured() && isImplausibleMacros(readSnapshot(), nutritionTextContext)) {
+        try {
+          const verify = await estimateFromText(
+            `Recipe: ${mealName}. Ingredients and preparation:\n${ingredientLine || aiDescription.slice(0, 8000)}`,
+          );
+          if (engineMacrosOk(verify?.macros)) {
+            setFromMacros(verify!.macros);
+          }
+        } catch (err: any) {
+          console.warn('Nutrition engine verify pass:', userMessageForError(err));
         }
       }
 

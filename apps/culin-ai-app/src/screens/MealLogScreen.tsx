@@ -18,7 +18,12 @@ import {
 } from "react-native";
 import { useState, useEffect, useCallback, useRef } from "react";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
-import { estimateFromText, formatMacrosForLogConfirmation, isZeroEstimate, userMessageForError } from "@/src/services/nutritionApi";
+import {
+  estimateFromText,
+  formatMacrosForLogConfirmation,
+  isZeroEstimate,
+  userMessageForError,
+} from "@/src/services/nutritionApi";
 import {
   searchFoods,
   autocompleteFoods,
@@ -27,7 +32,7 @@ import {
   formatDateForLog,
   type FatSecretFood,
 } from "@/src/services/fatSecretApi";
-import { isNutritionApiConfigured, isFatSecretConfigured } from "@/src/config/api";
+import { isNutritionApiConfigured, isFatSecretMealSearchEnabled } from "@/src/config/api";
 import {
   saveMeal,
   getMealsByDate,
@@ -127,7 +132,7 @@ export default function MealLogScreen() {
 
     // Debounced predictive search as user types
     useEffect(() => {
-      if (!isFatSecretConfigured()) return;
+      if (!isFatSecretMealSearchEnabled()) return;
 
       if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -218,8 +223,8 @@ export default function MealLogScreen() {
       const text = mealInput.trim();
       if (!text) return;
 
-      // Try FatSecret search first (if configured)
-      if (isFatSecretConfigured()) {
+      // Optional FatSecret catalog search (opt-in — default is nutrition engine only)
+      if (isFatSecretMealSearchEnabled()) {
         setLoading(true);
         setSearchResults([]);
         try {
@@ -527,7 +532,7 @@ export default function MealLogScreen() {
                 <>
                   <MaterialIcons name="add" size={20} color="#fff" />
                   <AnimatedText variant="button" delay={700} style={styles.addText}>
-                    {isFatSecretConfigured() ? "Search" : "Add"}
+                    {isFatSecretMealSearchEnabled() ? "Search" : "Add"}
                   </AnimatedText>
                 </>
               )}

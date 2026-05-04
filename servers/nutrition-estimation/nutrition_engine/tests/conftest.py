@@ -32,5 +32,5 @@ def mock_estimate_nutrition():
         "confidence": 0.85,
         "debug": {},
     }
-    with patch("app.cache.estimate_nutrition", return_value=stub_response):
+    with patch("app.engine.estimate_nutrition", return_value=stub_response):
         yield stub_response

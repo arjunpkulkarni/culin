@@ -3,7 +3,15 @@
 import logging
 from pathlib import Path
 
-from app.config import LAYER1_ARTIFACTS, LAYER2_ARTIFACTS, LAYER3_ARTIFACTS, LLM_PROVIDER, LLM_API_KEY, LLM_MODEL
+from app.config import (
+    ENABLE_LAYER3,
+    LAYER1_ARTIFACTS,
+    LAYER2_ARTIFACTS,
+    LAYER3_ARTIFACTS,
+    LLM_PROVIDER,
+    LLM_API_KEY,
+    LLM_MODEL,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,19 +45,26 @@ def startup(app=None):
     from layers import layer2
     layer2.load_calibration_tables(str(LAYER2_ARTIFACTS))
 
-    logger.info("Loading Layer 3 embeddings from %s", LAYER3_ARTIFACTS)
-    from layers import layer3
-    layer3.load_embeddings(str(LAYER3_ARTIFACTS))
+    l2_ok, l3_files_ok = _artifacts_readiness()
+    if ENABLE_LAYER3:
+        logger.info("Loading Layer 3 embeddings from %s", LAYER3_ARTIFACTS)
+        from layers import layer3
+
+        layer3.load_embeddings(str(LAYER3_ARTIFACTS))
+    else:
+        logger.info("Layer 3 disabled (set NUTRITION_ENABLE_LAYER3=1 to load); skipping embedding artifacts")
 
     # Log a single readiness line so EC2/CloudWatch show whether real data is present
-    l2_ok, l3_ok = _artifacts_readiness()
-    if l2_ok and l3_ok:
-        logger.info("Artifacts: Layer2 OK, Layer3 OK (real data loaded)")
+    if l2_ok and (l3_files_ok if ENABLE_LAYER3 else True):
+        logger.info(
+            "Artifacts: Layer2 OK, Layer3 %s",
+            "OK (loaded)" if ENABLE_LAYER3 and l3_files_ok else "off",
+        )
     else:
         logger.warning(
-            "Artifacts: Layer2 %s, Layer3 %s — missing artifacts use fallback/pass-through; see docs/EC2_REAL_DATA_AND_LEARNING.md",
+            "Artifacts: Layer2 %s, Layer3 %s — see docs/EC2_REAL_DATA_AND_LEARNING.md",
             "OK" if l2_ok else "MISSING",
-            "OK" if l3_ok else "MISSING",
+            "OK" if (ENABLE_LAYER3 and l3_files_ok) else ("off" if not ENABLE_LAYER3 else "MISSING"),
         )
 
     # Layer 0 — LLM provider (optional; /estimate-from-text won't work without it)
@@ -72,6 +87,7 @@ def startup(app=None):
     if app is not None:
         app.state.ready = True
         app.state.artifacts_layer2_ok = l2_ok
-        app.state.artifacts_layer3_ok = l3_ok
+        app.state.artifacts_layer3_ok = bool(ENABLE_LAYER3 and l3_files_ok)
+        app.state.layer3_runtime_enabled = ENABLE_LAYER3
         app.state.layer0_available = l0_ok
     logger.info("Startup complete; ready to serve requests.")

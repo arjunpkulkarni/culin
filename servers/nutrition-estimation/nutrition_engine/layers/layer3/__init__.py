@@ -1,28 +1,37 @@
-"""Layer 3: similarity refinement. Real implementation from CulinAIAPP-Layer3.
+"""Layer 3: optional similarity refinement.
 
-Set LAYER3_ENABLED=true to activate; disabled by default until embeddings
-and feature plumbing are rebuilt for v2.
+Disabled by default (`NUTRITION_ENABLE_LAYER3` unset). When off, ``apply_layer3``
+passes through Layer 2 macros and startup skips loading embedding artifacts.
 """
 
 import logging
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
-
-LAYER3_ENABLED = os.getenv("LAYER3_ENABLED", "false").lower() in ("1", "true", "yes")
 
 _loaded = False
 _artifacts: Dict[str, Any] | None = None
 
 
 def load_embeddings(artifacts_path: str) -> None:
-    """Load Layer 3 artifacts (embeddings, neighbor index, etc.). Call once at startup."""
+    """Load Layer 3 artifacts. No-op when ``ENABLE_LAYER3`` is false in ``app.config``."""
     global _loaded, _artifacts
+    try:
+        from app.config import ENABLE_LAYER3
+
+        if not ENABLE_LAYER3:
+            _artifacts = None
+            _loaded = True
+            logger.info("Layer 3: disabled in config; not loading artifacts from %s", artifacts_path)
+            return
+    except ImportError:
+        pass
+
     path = Path(artifacts_path)
     try:
         from layers.layer3.layer3 import loader
+
         _artifacts = loader.load_all(path)
         _loaded = True
         logger.info("Layer 3: loaded embeddings and artifacts from %s", path)
@@ -41,8 +50,19 @@ def apply_layer3(
     ingredients: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Refine calibrated estimate. Returns final_macros, layer3_confidence, refinements_applied."""
+    try:
+        from app.config import ENABLE_LAYER3
+    except ImportError:
+        ENABLE_LAYER3 = False
+
     macros = l2_output.get("macros", {})
-    if not LAYER3_ENABLED or _artifacts is None:
+    if not ENABLE_LAYER3:
+        return {
+            "final_macros": dict(macros),
+            "layer3_confidence": 1.0,
+            "refinements_applied": {"layer3": "disabled"},
+        }
+    if _artifacts is None:
         return {
             "final_macros": dict(macros),
             "layer3_confidence": 1.0,

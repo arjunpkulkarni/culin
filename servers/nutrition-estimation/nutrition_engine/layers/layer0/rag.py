@@ -18,6 +18,43 @@ logger = logging.getLogger(__name__)
 
 _SPLIT_RE = re.compile(r",|\band\b|\bwith\b|\bon\b|\bserved\b|\btopped\b", re.IGNORECASE)
 
+# Stop words that add noise to fuzzy retrieval (e.g. "3 slices of bread" -> we
+# really want to match "bread", not strings that happen to contain "of").
+_STOP_TOKENS = frozenset({
+    "of", "the", "a", "an", "to", "for", "in", "by",
+    "some", "few", "any", "all", "my", "your",
+    "slice", "slices", "piece", "pieces", "cup", "cups",
+    "tbsp", "tsp", "g", "gram", "grams", "oz", "ounce", "ounces",
+    "ml", "l", "kg", "lb", "lbs",
+})
+
+
+def _normalize_for_match(s: str) -> str:
+    """Lowercase, drop digits + stop words, strip trailing 's' on tokens >= 4 chars.
+
+    Examples:
+      "2 eggs"            -> "egg"
+      "3 slices of bread" -> "bread"
+      "1 cup rice"        -> "rice"
+      "200g salmon"       -> "salmon"
+
+    The goal is to leave only the ingredient noun(s) so fuzzy retrieval lines up
+    with canonical lookup-table names instead of descriptive menu strings that
+    happen to share a substring.
+    """
+    out: List[str] = []
+    for tok in re.split(r"[^a-z]+", s.lower()):
+        if not tok or tok.isdigit():
+            continue
+        if tok in _STOP_TOKENS:
+            continue
+        if len(tok) >= 4 and tok.endswith("s"):
+            tok = tok[:-1]
+        if tok in _STOP_TOKENS:
+            continue
+        out.append(tok)
+    return " ".join(out)
+
 
 def extract_search_terms(free_text: str) -> List[str]:
     """Split free-text into individual ingredient-like search terms."""
@@ -52,7 +89,8 @@ def _search_lookup(term: str, limit: int) -> List[Dict[str, Any]]:
     if tables is None:
         return []
 
-    term_lower = term.lower()
+    term_norm = _normalize_for_match(term)
+    term_tokens = set(term_norm.split())
     hits: List[Dict[str, Any]] = []
 
     try:
@@ -65,15 +103,43 @@ def _search_lookup(term: str, limit: int) -> List[Dict[str, Any]]:
     for name, row in tables.all_names_with_ingredients:
         if row.id not in tables.nutrient_profiles:
             continue
-        if _use_rapidfuzz:
-            score = fuzz.partial_ratio(term_lower, name) / 100.0
+        name_norm = _normalize_for_match(name)
+        name_tokens = name_norm.split()
+        if not name_tokens:
+            continue
+
+        # Token-overlap score: how much of the user term's vocabulary the candidate covers.
+        name_tokens_set = set(name_tokens)
+        if term_tokens:
+            overlap_score = len(term_tokens & name_tokens_set) / len(term_tokens)
         else:
-            overlap = len(set(term_lower.split()) & set(name.split()))
-            score = overlap / max(len(term_lower.split()), 1)
-            if term_lower in name or name in term_lower:
-                score = max(score, 0.7)
+            overlap_score = 0.0
+
+        if _use_rapidfuzz:
+            fuzzy_score = fuzz.partial_ratio(term_norm, name_norm) / 100.0
+        elif term_norm in name_norm or name_norm in term_norm:
+            fuzzy_score = 0.7
+        else:
+            fuzzy_score = 0.0
+
+        # Take the better signal — handles both substring matches ("eggs" in
+        # "egg whole pasteurized" via stem) and disjoint-but-overlapping tokens
+        # ("slice of bread" -> "bread white commercially prepared").
+        score = max(fuzzy_score, overlap_score)
+
+        # Prefer candidates whose first token matches a user term token (canonical
+        # ingredients usually lead with the noun, e.g. "egg whole pasteurized").
+        head_match_bonus = 0.10 if name_tokens[0] in term_tokens else 0.0
+        # Short, focused names beat long descriptive menu strings on ties.
+        short_bonus = max(0.0, 0.10 - 0.005 * len(name_tokens))
+
         if score > 0.4:
-            hits.append({"name": row.name, "category": None, "score": score, "source": "lookup"})
+            hits.append({
+                "name": row.name,
+                "category": None,
+                "score": score + head_match_bonus + short_bonus,
+                "source": "lookup",
+            })
 
     hits.sort(key=lambda h: h["score"], reverse=True)
     return hits[:limit]

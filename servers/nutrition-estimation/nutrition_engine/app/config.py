@@ -4,6 +4,15 @@ import os
 from pathlib import Path
 from typing import Optional
 
+# Load nutrition_engine/.env before any os.environ reads (uvicorn does not load .env by default).
+try:
+    from dotenv import load_dotenv
+
+    _ENGINE_ROOT = Path(__file__).resolve().parent.parent
+    load_dotenv(_ENGINE_ROOT / ".env")
+except ImportError:
+    pass
+
 # Base path for artifacts (set at startup; no disk read after)
 ARTIFACTS_ROOT = Path(os.environ.get("NUTRITION_ARTIFACTS", "artifacts")).resolve()
 
@@ -58,5 +67,27 @@ def _env_truthy(name: str, default: bool = False) -> bool:
     return raw.strip().lower() in ("1", "true", "yes", "on")
 
 
-# POST /estimate-from-text — use one Gemini macro estimate (fast v1 UX). Set to 0/false for full Layer 0 + L1–L3 pipeline.
-ESTIMATE_SIMPLE_LLM: bool = _env_truthy("ESTIMATE_SIMPLE_LLM", default=True)
+# When true, POST /estimate and /estimate-from-text memoize responses (same body → same answer).
+# Default off so repeat logs always re-run the engine (LLM + layers can drift / improve).
+# Enable in high-traffic prod if needed: NUTRITION_ESTIMATE_CACHE=1
+ESTIMATE_CACHE_ENABLED: bool = _env_truthy("NUTRITION_ESTIMATE_CACHE", default=False)
+
+# POST /estimate-from-text — one Gemini macro call (fast v1). Default off: Layer 0 + L1–L2 (USDA-backed).
+ESTIMATE_SIMPLE_LLM: bool = _env_truthy("ESTIMATE_SIMPLE_LLM", default=False)
+
+# Final Gemini pass: validate / revise macros (default: always when LLM is configured).
+# Opt out entirely: NUTRITION_LLM_MACRO_POLISH=0. Only when automated checks flag issues: NUTRITION_LLM_MACRO_POLISH_ALWAYS=0
+NUTRITION_LLM_MACRO_POLISH: bool = _env_truthy("NUTRITION_LLM_MACRO_POLISH", default=True)
+NUTRITION_LLM_MACRO_POLISH_ALWAYS: bool = _env_truthy("NUTRITION_LLM_MACRO_POLISH_ALWAYS", default=True)
+
+
+def _resolve_layer3_enabled() -> bool:
+    """Layer 3 similarity refinement — dev / optional. Prefer NUTRITION_ENABLE_LAYER3; else LAYER3_ENABLED."""
+    raw = os.environ.get("NUTRITION_ENABLE_LAYER3")
+    if raw is not None and str(raw).strip() != "":
+        return str(raw).strip().lower() in ("1", "true", "yes", "on")
+    return _env_truthy("LAYER3_ENABLED", default=False)
+
+
+# When false (default): engine uses L2 macros as final output; startup skips L3 embedding load.
+ENABLE_LAYER3: bool = _resolve_layer3_enabled()

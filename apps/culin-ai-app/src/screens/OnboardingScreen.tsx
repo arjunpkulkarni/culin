@@ -8,6 +8,7 @@ import {
   Alert,
   Pressable,
   Text,
+  Modal,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -59,6 +60,8 @@ export default function OnboardingScreen() {
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  /** iOS spinner value while modal is open (avoid ScrollView stealing wheel pans). */
+  const [iosPickerDate, setIosPickerDate] = useState(() => new Date(2000, 0, 15));
   const [heightFeet, setHeightFeet] = useState('');
   const [heightInches, setHeightInches] = useState('');
   const [weightLb, setWeightLb] = useState('');
@@ -76,19 +79,45 @@ export default function OnboardingScreen() {
 
   const formatDateForDisplay = (dateString: string) => {
     if (!dateString) return 'Select your date of birth';
+    const isoDay = dateString.trim().split('T')[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(isoDay)) {
+      const [y, m, d] = isoDay.split('-').map((n) => Number(n));
+      const parsed = new Date(y, m - 1, d);
+      if (!Number.isNaN(parsed.getTime())) return parsed.toLocaleDateString();
+    }
     const parsed = new Date(dateString);
     if (Number.isNaN(parsed.getTime())) return 'Select your date of birth';
     return parsed.toLocaleDateString();
   };
 
-  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
+  const openDatePicker = () => {
+    const raw = dateOfBirth.trim().split('T')[0];
+    let next: Date;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      const [y, m, d] = raw.split('-').map((n) => Number(n));
+      next = new Date(y, m - 1, d);
+    } else {
+      next = new Date(2000, 0, 15);
     }
+    if (Number.isNaN(next.getTime())) next = new Date(2000, 0, 15);
+    const max = new Date();
+    if (next > max) next = max;
+    setIosPickerDate(next);
+    setShowDatePicker(true);
+  };
 
+  const commitIosDateOfBirth = () => {
+    const selectedDate = iosPickerDate;
+    const yyyy = selectedDate.getFullYear();
+    const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(selectedDate.getDate()).padStart(2, '0');
+    setDateOfBirth(`${yyyy}-${mm}-${dd}`);
+    setShowDatePicker(false);
+  };
+
+  const handleAndroidDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowDatePicker(false);
     if (event.type === 'dismissed' || !selectedDate) return;
-
-    // Store as YYYY-MM-DD to keep transport and parsing stable.
     const yyyy = selectedDate.getFullYear();
     const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
     const dd = String(selectedDate.getDate()).padStart(2, '0');
@@ -256,19 +285,19 @@ export default function OnboardingScreen() {
             subtitle="Helps us calculate your nutritional needs"
             icon="cake"
           >
-            <Pressable style={styles.datePickerButton} onPress={() => setShowDatePicker(true)}>
+            <Pressable style={styles.datePickerButton} onPress={openDatePicker}>
               <MaterialIcons name="calendar-today" size={20} color="#666" style={styles.datePickerIcon} />
               <Text style={[styles.datePickerText, !dateOfBirth && styles.datePickerPlaceholder]}>
                 {formatDateForDisplay(dateOfBirth)}
               </Text>
             </Pressable>
-            {showDatePicker && (
+            {showDatePicker && Platform.OS === 'android' && (
               <DateTimePicker
-                value={dateOfBirth ? new Date(dateOfBirth) : new Date(2000, 0, 1)}
+                value={iosPickerDate}
                 mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="default"
                 maximumDate={new Date()}
-                onChange={handleDateChange}
+                onChange={handleAndroidDateChange}
               />
             )}
           </QuestionCard>
@@ -405,6 +434,38 @@ export default function OnboardingScreen() {
           </ScrollView>
         </Animated.View>
 
+        {Platform.OS === 'ios' && (
+          <Modal
+            visible={showDatePicker}
+            animationType="slide"
+            transparent
+            onRequestClose={() => setShowDatePicker(false)}
+          >
+            <Pressable style={styles.dateModalOverlay} onPress={() => setShowDatePicker(false)}>
+              <Pressable style={styles.dateModalCard} onPress={(e) => e.stopPropagation()}>
+                <View style={styles.dateModalToolbar}>
+                  <Pressable onPress={() => setShowDatePicker(false)} hitSlop={12}>
+                    <Text style={styles.dateModalToolbarBtn}>Cancel</Text>
+                  </Pressable>
+                  <Pressable onPress={commitIosDateOfBirth} hitSlop={12}>
+                    <Text style={[styles.dateModalToolbarBtn, styles.dateModalToolbarDone]}>Done</Text>
+                  </Pressable>
+                </View>
+                <DateTimePicker
+                  value={iosPickerDate}
+                  mode="date"
+                  display="spinner"
+                  maximumDate={new Date()}
+                  minimumDate={new Date(1900, 0, 1)}
+                  onChange={(_, selectedDate) => {
+                    if (selectedDate) setIosPickerDate(selectedDate);
+                  }}
+                />
+              </Pressable>
+            </Pressable>
+          </Modal>
+        )}
+
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
           {currentStep > 1 && (
             <View style={styles.backButtonContainer}>
@@ -473,6 +534,34 @@ const styles = StyleSheet.create({
   },
   datePickerPlaceholder: {
     color: '#9ca3af',
+  },
+  dateModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  dateModalCard: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: spacing.lg,
+  },
+  dateModalToolbar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e5e7eb',
+  },
+  dateModalToolbarBtn: {
+    fontSize: 17,
+    color: '#6b7280',
+  },
+  dateModalToolbarDone: {
+    color: '#2563eb',
+    fontWeight: '600',
   },
   footer: {
     paddingHorizontal: spacing.lg,
