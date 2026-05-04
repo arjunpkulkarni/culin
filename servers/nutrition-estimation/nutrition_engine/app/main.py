@@ -5,7 +5,7 @@ import threading
 import time
 import uuid
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.auth import require_auth
@@ -41,6 +41,7 @@ def on_startup():
     app.state.ready = False
     app.state.artifacts_layer2_ok = False
     app.state.artifacts_layer3_ok = False
+    app.state.layer3_runtime_enabled = False
 
     def run_startup():
         try:
@@ -123,9 +124,14 @@ def ready(request: Request):
     if getattr(request.app.state, "ready", False):
         out = {"status": "ready"}
         if getattr(request.app.state, "artifacts_layer2_ok", None) is not None:
+            l3_on = getattr(request.app.state, "layer3_runtime_enabled", False)
             out["artifacts"] = {
                 "layer2": "ok" if request.app.state.artifacts_layer2_ok else "missing",
-                "layer3": "ok" if request.app.state.artifacts_layer3_ok else "missing",
+                "layer3": (
+                    "off"
+                    if not l3_on
+                    else ("ok" if request.app.state.artifacts_layer3_ok else "missing")
+                ),
             }
         return out
     return {"status": "starting"}, 503
@@ -138,8 +144,8 @@ def root():
         "service": "Nutrition Estimation Engine",
         "version": "2.0.0",
         "endpoints": {
-            "POST /estimate-from-text": "Primary endpoint. Default: one LLM macro estimate (v1). Full Layer 0 + L1→L3 when ESTIMATE_SIMPLE_LLM=false.",
-            "POST /estimate": "Structured input → Layer 0 → L1 → L2 → L3.",
+            "POST /estimate-from-text": "Primary endpoint. Default: Layer 0 + L1→L2 (L3 off). Set NUTRITION_ENABLE_LAYER3=1 for L3; ESTIMATE_SIMPLE_LLM=1 for v1 LLM macros.",
+            "POST /estimate": "Structured input → Layer 0 → L1 → L2 (L3 optional).",
             "GET /health": "Liveness check.",
             "GET /ready": "Readiness check (startup complete?).",
             "GET /docs": "Interactive API docs (Swagger UI).",
@@ -148,8 +154,13 @@ def root():
 
 
 @app.post("/estimate")
-def estimate(req: NutritionRequest, request: Request, _identity: str = Depends(require_auth)):
-    """Structured input. Always runs through Layer 0 (LLM re-structuring) before L1 → L2 → L3."""
+def estimate(
+    req: NutritionRequest,
+    request: Request,
+    response: Response,
+    _identity: str = Depends(require_auth),
+):
+    """Structured input → Layer 1 → Layer 2; Layer 3 only if NUTRITION_ENABLE_LAYER3=1."""
     if not getattr(request.app.state, "ready", False):
         return JSONResponse(
             status_code=503,
@@ -160,18 +171,21 @@ def estimate(req: NutritionRequest, request: Request, _identity: str = Depends(r
             status_code=503,
             content={"detail": "Layer 0 (LLM) not configured. Set LLM_API_KEY."},
         )
-    from app.cache import cached_estimate_from_text
-    text = req.get("description", "") or req.get("item_name", "")
-    return cached_estimate_from_text(
-        text=text,
-        restaurant=req.get("restaurant"),
-        price=req.get("price"),
-    )
+    from app.engine import estimate_nutrition
+
+    # Always run the full pipeline (no in-process LRU); repeat logs must not reuse stale macros.
+    response.headers["Cache-Control"] = "no-store"
+    return estimate_nutrition(req)
 
 
 @app.post("/estimate-from-text")
-def estimate_from_text(req: FreeTextRequest, request: Request, _identity: str = Depends(require_auth)):
-    """Free-text → macros (default v1: single LLM call; full layered pipeline if ESTIMATE_SIMPLE_LLM=false)."""
+def estimate_from_text(
+    req: FreeTextRequest,
+    request: Request,
+    response: Response,
+    _identity: str = Depends(require_auth),
+):
+    """Free-text → macros (default: Layer 0 + L1→L2; L3 off unless NUTRITION_ENABLE_LAYER3=1)."""
     if not getattr(request.app.state, "ready", False):
         return JSONResponse(
             status_code=503,
@@ -182,8 +196,10 @@ def estimate_from_text(req: FreeTextRequest, request: Request, _identity: str = 
             status_code=503,
             content={"detail": "Layer 0 (LLM) not configured. Set LLM_API_KEY."},
         )
-    from app.cache import cached_estimate_from_text
-    return cached_estimate_from_text(
+    from app.engine import estimate_from_text as run_estimate_from_text
+
+    response.headers["Cache-Control"] = "no-store"
+    return run_estimate_from_text(
         text=req.text,
         restaurant=req.restaurant,
         price=req.price,

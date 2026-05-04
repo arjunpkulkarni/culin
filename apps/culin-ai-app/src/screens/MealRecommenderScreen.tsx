@@ -8,6 +8,7 @@ import { QuickLogModal } from '@/src/components/QuickLogModal';
 import { StatusLine } from '@/src/components/StatusLine';
 import { Suggestion, SuggestionCard } from '@/src/components/SuggestionCard';
 import { colors, fontFamily, radius, shadows } from '@/src/design/tokens';
+import { isNutritionApiConfigured } from '@/src/config/api';
 import { createCulinAIApi } from '@/src/services/culinaiApi';
 import { formatDateForLog, getDefaultMealType } from '@/src/services/fatSecretApi';
 import {
@@ -185,30 +186,47 @@ export default function MealRecommenderScreen() {
     const logCtx = { uid, descriptionSnippet };
 
     try {
-      let result;
-      try {
-        result = await estimateFromText(description);
-      } catch (err) {
-        logQuickMealLogFailure(err, { ...logCtx, phase: 'estimate' });
-        throw err;
-      }
+      let cal = 0;
+      let prot = 0;
+      let carb = 0;
+      let fatG = 0;
+      let estimateFailed = false;
+      /** Shown after save when macros are missing (HTTP/network vs vague text). */
+      let estimateFailureDetail: string | null = null;
 
-      if (!result?.macros || isZeroEstimate(result.macros)) {
-        Alert.alert(
-          'Could not estimate',
-          'Try a more specific description (e.g. "two scrambled eggs with toast and butter").'
-        );
-        return;
+      if (isNutritionApiConfigured()) {
+        try {
+          const result = await estimateFromText(description);
+          // Server already runs plausibility + final LLM polish; if we get a non-zero 200, use it.
+          if (result?.macros && !isZeroEstimate(result.macros)) {
+            cal = result.macros.calories ?? 0;
+            prot = result.macros.protein ?? 0;
+            carb = result.macros.carbs ?? 0;
+            fatG = result.macros.fat ?? 0;
+          } else {
+            estimateFailed = true;
+            estimateFailureDetail =
+              'Could not infer calories from that description. Try naming ingredients (for example: "grilled chicken, rice, and broccoli").';
+          }
+        } catch (err) {
+          logQuickMealLogFailure(err, { ...logCtx, phase: 'estimate' });
+          estimateFailed = true;
+          estimateFailureDetail = userMessageForError(err);
+        }
       }
 
       const todayISO = formatDateForLog();
+      const macrosSaved = {
+        calories: cal,
+        protein: prot,
+        carbs: carb,
+        fat: fatG,
+      };
+
       try {
         await saveMeal(uid, {
           foodName: description,
-          calories: result.macros.calories ?? 0,
-          protein: result.macros.protein ?? 0,
-          carbs: result.macros.carbs ?? 0,
-          fat: result.macros.fat ?? 0,
+          ...macrosSaved,
           mealType: getDefaultMealType(),
           date: todayISO,
         });
@@ -224,9 +242,22 @@ export default function MealRecommenderScreen() {
         throw err;
       }
 
-      const macroLine = formatMacrosForLogConfirmation(result.macros);
-      console.log('[CulinAI][MealLogged]', macroLine);
-      Alert.alert('Meal logged', macroLine);
+      const usedNutritionEstimate =
+        isNutritionApiConfigured() &&
+        !estimateFailed &&
+        (cal > 0 || prot > 0 || carb > 0 || fatG > 0);
+
+      if (usedNutritionEstimate) {
+        const macroLine = formatMacrosForLogConfirmation(macrosSaved);
+        console.log('[CulinAI][MealLogged]', macroLine);
+        Alert.alert('Meal logged', macroLine);
+      } else if (estimateFailed) {
+        Alert.alert(
+          'Meal logged',
+          `Saved without macro totals.\n\n${estimateFailureDetail ?? 'Nutrition estimate was not available.'}`,
+        );
+      }
+
       setQuickLogOpen(false);
     } catch (err: any) {
       Alert.alert('Failed to log meal', userMessageForError(err));
@@ -278,12 +309,41 @@ export default function MealRecommenderScreen() {
     if (!recipe) return;
     try {
       const todayISO = formatDateForLog();
+      let calories = recipe.calories;
+      let protein = recipe.protein;
+      let carbs = recipe.carbs;
+      let fat = recipe.fat;
+
+      // Re-run nutrition engine every time — saved recipe macros may be stale (e.g. old 0-protein estimates).
+      if (isNutritionApiConfigured()) {
+        try {
+          const blob = [
+            recipe.name,
+            recipe.ingredients?.length
+              ? `Ingredients:\n${recipe.ingredients.slice(0, 20).join('\n')}`
+              : '',
+          ]
+            .filter(Boolean)
+            .join('\n')
+            .slice(0, 12000);
+          const result = await estimateFromText(blob);
+          if (result?.macros && !isZeroEstimate(result.macros)) {
+            calories = result.macros.calories ?? calories;
+            protein = result.macros.protein ?? protein;
+            carbs = result.macros.carbs ?? carbs;
+            fat = result.macros.fat ?? fat;
+          }
+        } catch (e) {
+          console.warn('[CulinAI] Eat-next re-estimate failed; using saved recipe macros', e);
+        }
+      }
+
       await saveMeal(uid, {
         foodName: recipe.name,
-        calories: recipe.calories,
-        protein: recipe.protein,
-        carbs: recipe.carbs,
-        fat: recipe.fat,
+        calories,
+        protein,
+        carbs,
+        fat,
         mealType: getDefaultMealType(),
         date: todayISO,
       });

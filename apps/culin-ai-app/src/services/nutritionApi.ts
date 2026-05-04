@@ -61,6 +61,16 @@ function _isMacroRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === 'object' && x !== null && !Array.isArray(x);
 }
 
+/** Lowercase keys so gateways / serializers that emit `Protein` still parse. */
+function _canonicalMacroBag(bag: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(bag)) {
+    const lk = k.trim().toLowerCase();
+    if (lk) out[lk] = v;
+  }
+  return out;
+}
+
 /** Parse API numbers that may arrive as floats or numeric strings from Python / proxies. */
 function _coerceNumber(v: unknown): number {
   if (typeof v === 'number' && Number.isFinite(v)) return v;
@@ -93,13 +103,14 @@ function normaliseMacros(raw: NutritionEstimateResponse): NutritionMacros {
   const root = raw as Record<string, unknown>;
   let bag: Record<string, unknown> = {};
 
-  if (_isMacroRecord(raw.macros)) bag = raw.macros as Record<string, unknown>;
+  if (_isMacroRecord(raw.macros)) bag = _canonicalMacroBag(raw.macros as Record<string, unknown>);
   else if (_isMacroRecord(raw.final_macros))
-    bag = raw.final_macros as Record<string, unknown>;
+    bag = _canonicalMacroBag(raw.final_macros as Record<string, unknown>);
   else if (raw.data != null && _isMacroRecord(raw.data)) {
     const d = raw.data as Record<string, unknown>;
-    if (_isMacroRecord(d.macros)) bag = d.macros as Record<string, unknown>;
-    else if (_isMacroRecord(d.final_macros)) bag = d.final_macros as Record<string, unknown>;
+    if (_isMacroRecord(d.macros)) bag = _canonicalMacroBag(d.macros as Record<string, unknown>);
+    else if (_isMacroRecord(d.final_macros))
+      bag = _canonicalMacroBag(d.final_macros as Record<string, unknown>);
   }
 
   const r = raw;
@@ -141,6 +152,37 @@ export function isZeroEstimate(macros: NutritionMacros): boolean {
   );
 }
 
+/** Matches server ``_CARB_SNACK_OR_DRINK_EXEMPT`` — drinks/candy may be near-zero P/F. */
+const CARB_SNACK_OR_DRINK_EXEMPT =
+  /\b(?:soda|soft drink|pop|cola|pepsi|sprite|fanta|dr pepper|mountain dew|juice|lemonade|sweet tea|iced tea|gatorade|powerade|vitaminwater|energy drink|red bull|monster|candy|gumm|skittles|starburst|licorice|jelly beans|sour patch|syrup|maple syrup|agave|honey|molasses|simple syrup|marshmallow|frosting|icing|glucose gel|gu gel)\b/i;
+
+/**
+ * True when stated kcal is not explained by protein/carbs/fat (e.g. chat markdown glitches),
+ * or when macros are Atwater-consistent but absurd (almost all kcal from carbs, ~no P/F).
+ *
+ * ``userContext`` — optional meal description; used to exempt explicit soda/juice/candy logs.
+ */
+export function isImplausibleMacros(macros: NutritionMacros, userContext = ''): boolean {
+  const cal = macros.calories ?? 0;
+  const p = macros.protein ?? 0;
+  const c = macros.carbs ?? 0;
+  const f = macros.fat ?? 0;
+  const mk = p * 4 + c * 4 + f * 9;
+
+  if (cal >= 120 && p < 1 && f < 1 && c >= 35) {
+    const carbKcal = 4 * c;
+    if (carbKcal / cal > 0.82 && !CARB_SNACK_OR_DRINK_EXEMPT.test(userContext)) {
+      return true;
+    }
+  }
+
+  if (cal < 55) return false;
+  if (cal > 80 && mk < 25) return true;
+  if (cal > 0 && mk < 0.22 * cal) return true;
+  if (mk > 1.38 * cal + 100) return true;
+  return false;
+}
+
 /* ── Retry helper for transient errors ────────────────────────────── */
 
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -166,13 +208,35 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
 
 /* ── User-facing error messages ───────────────────────────────────── */
 
+function isLikelyNetworkOrTransportError(err: any): boolean {
+  const msg = typeof err?.message === 'string' ? err.message : String(err ?? '');
+  const low = msg.toLowerCase();
+  if (low.includes('network request failed')) return true;
+  if (low.includes('failed to fetch')) return true;
+  if (low.includes('network error')) return true;
+  if (err?.name === 'TypeError' && (low.includes('fetch') || low.includes('network'))) return true;
+  return false;
+}
+
 export function userMessageForError(err: any): string {
   const status = err?.status;
   if (status === 401) return 'Session expired. Please sign in again.';
   if (status === 429) return "You're making requests too fast. Wait a moment.";
   if (status === 502) return "Couldn't analyze this food. Try a more specific description.";
-  if (status === 503) return 'Service is loading. Try again in a few seconds.';
+  if (status === 503) {
+    const detail = typeof err?.message === 'string' ? err.message.trim() : '';
+    if (detail) return detail;
+    return 'Service is loading. Try again in a few seconds.';
+  }
   if (status === 504) return 'Request timed out. Please try again.';
+  if (isLikelyNetworkOrTransportError(err)) {
+    const base = String(NUTRITION_API_BASE_URL || '').replace(/\/$/, '');
+    const isLocalhost = /127\.0\.0\.1|localhost/i.test(base);
+    const hint = isLocalhost
+      ? " On a phone or simulator, use your computer's LAN IP in EXPO_PUBLIC_NUTRITION_API_URL (see apps/culin-ai-app/.env.example), not localhost."
+      : ' If you use a custom API URL, confirm the server is running and reachable from this device.';
+    return `Could not reach the nutrition service. Check Wi‑Fi and VPN.${hint} If you use Expo Tunnel, run \`npx expo start --lan\` (or set EXPO_PUBLIC_NUTRITION_API_URL to your computer's LAN IP) so the phone can reach a local server.`;
+  }
   return err?.message || 'Something went wrong. Please try again.';
 }
 
@@ -215,6 +279,12 @@ export function logQuickMealLogFailure(
  */
 const ESTIMATE_TIMEOUT_MS = 90_000;
 
+/** Defeat any intermediary cache; each request must be unique. */
+const ESTIMATE_EXTRA_HEADERS = {
+  'Cache-Control': 'no-cache, no-store, must-revalidate',
+  Pragma: 'no-cache',
+} as const;
+
 export async function estimateFromText(
   input: string | FreeTextEstimateRequest,
 ): Promise<{ raw: NutritionEstimateResponse; macros: NutritionMacros } | null> {
@@ -229,11 +299,24 @@ export async function estimateFromText(
   const raw = await withRetry(() =>
     callBackend<NutritionEstimateResponse>('/estimate-from-text', {
       body,
+      params: { _cb: Date.now() },
       timeoutMs: ESTIMATE_TIMEOUT_MS,
+      cache: 'no-store',
+      extraHeaders: { ...ESTIMATE_EXTRA_HEADERS },
     }),
   );
 
-  return { raw, macros: normaliseMacros(raw) };
+  const macros = normaliseMacros(raw);
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    const r = raw as Record<string, unknown>;
+    console.warn('[CulinAI][nutrition:estimate-from-text]', {
+      apiBase: NUTRITION_API_BASE_URL,
+      textPreview: body.text.slice(0, 60),
+      macros,
+      confidence: r.confidence,
+    });
+  }
+  return { raw, macros };
 }
 
 /* ── POST /estimate (structured) ──────────────────────────────────── */
@@ -254,7 +337,10 @@ export async function estimateNutrition(
   const raw = await withRetry(() =>
     callBackend<NutritionEstimateResponse>('/estimate', {
       body,
+      params: { _cb: Date.now() },
       timeoutMs: ESTIMATE_TIMEOUT_MS,
+      cache: 'no-store',
+      extraHeaders: { ...ESTIMATE_EXTRA_HEADERS },
     }),
   );
 

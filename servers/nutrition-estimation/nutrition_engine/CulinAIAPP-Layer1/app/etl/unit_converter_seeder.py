@@ -116,6 +116,7 @@ class UnitConversionSeeder:
         ],
         "yogurt": [
             ("cup", 245, "1 cup yogurt"),
+            ("piece", 170, "1 single-serve yogurt (~6 oz)"),
             ("tablespoon", 15, "1 tablespoon yogurt"),
         ],
         "honey": [

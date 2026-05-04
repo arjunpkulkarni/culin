@@ -3,17 +3,87 @@
  * - Nutrition estimation engine (POST /estimate, POST /estimate-from-text)
  * - FatSecret proxy (GET /food/search, POST /food/log, etc.)
  */
-export const NUTRITION_API_BASE_URL =
-  process.env.EXPO_PUBLIC_NUTRITION_API_URL || 'https://api.nutrition-engine.culin.ai';
 
-export const FATSECRET_API_BASE_URL =
-  process.env.EXPO_PUBLIC_FATSECRET_API_URL || NUTRITION_API_BASE_URL;
+import Constants from 'expo-constants';
+
+/** Tunnel / edge hosts only reach Metro, not arbitrary ports on your machine — skip rewrite. */
+function isTunnelishHostname(host: string): boolean {
+  const h = host.toLowerCase();
+  return h.includes('exp.direct') || h.includes('ngrok') || h.includes('.exp.host');
+}
+
+function hostnameFromPackagerUri(uri: string): string | null {
+  const host = uri.split(':')[0]?.trim();
+  if (!host || host === '127.0.0.1' || host === 'localhost') return null;
+  if (isTunnelishHostname(host)) return null;
+  return host;
+}
+
+/** Same machine Metro is bound to — use for nutrition/FatSecret when .env uses localhost. */
+function getDevPackagerHostname(): string | null {
+  const c = Constants as {
+    expoConfig?: { hostUri?: string };
+    manifest2?: { extra?: { expoClient?: { hostUri?: string } } };
+    manifest?: { debuggerHost?: string };
+  };
+  if (c.expoConfig?.hostUri) {
+    const h = hostnameFromPackagerUri(c.expoConfig.hostUri);
+    if (h) return h;
+  }
+  const manifestUri = c.manifest2?.extra?.expoClient?.hostUri;
+  if (typeof manifestUri === 'string') {
+    const h = hostnameFromPackagerUri(manifestUri);
+    if (h) return h;
+  }
+  if (c.manifest?.debuggerHost) {
+    return hostnameFromPackagerUri(c.manifest.debuggerHost);
+  }
+  return null;
+}
+
+/** In __DEV__, map http://localhost:8000 → http://<packager-host>:8000 so physical devices can reach uvicorn. */
+function rewriteLocalhostApiUrl(url: string): string {
+  if (typeof __DEV__ === 'undefined' || !__DEV__) return url;
+  if (!/127\.0\.0\.1|localhost/i.test(url)) return url;
+  const host = getDevPackagerHostname();
+  if (!host) return url;
+  const out = url.replace(/127\.0\.0\.1/gi, host).replace(/localhost/gi, host);
+  if (out !== url) {
+    console.warn('[CulinAI] Rewrote localhost in API base URL for device reachability:', out);
+  }
+  return out;
+}
+
+const rawNutritionUrl =
+  process.env.EXPO_PUBLIC_NUTRITION_API_URL || 'https://api.nutrition-engine.culin.ai';
+const rawFatSecretUrl = process.env.EXPO_PUBLIC_FATSECRET_API_URL;
+
+export const NUTRITION_API_BASE_URL = rewriteLocalhostApiUrl(rawNutritionUrl);
+export const FATSECRET_API_BASE_URL = rawFatSecretUrl
+  ? rewriteLocalhostApiUrl(rawFatSecretUrl)
+  : NUTRITION_API_BASE_URL;
 
 export const isNutritionApiConfigured = () =>
   Boolean(NUTRITION_API_BASE_URL && NUTRITION_API_BASE_URL.startsWith('http'));
 
 export const isFatSecretConfigured = () =>
   Boolean(FATSECRET_API_BASE_URL && FATSECRET_API_BASE_URL.startsWith('http'));
+
+function expoPublicEnvTruthy(name: string): boolean {
+  const raw = process.env[name];
+  if (raw == null || String(raw).trim() === '') return false;
+  return ['1', 'true', 'yes', 'on'].includes(String(raw).trim().toLowerCase());
+}
+
+/**
+ * Meal log screen: FatSecret `/food/search` autocomplete + "search first" before free-text estimate.
+ * Default **off** — `EXPO_PUBLIC_FATSECRET_API_URL` falls back to the same host as the nutrition API,
+ * which would otherwise make every log hit `/food/search` first and often **never** call
+ * `POST /estimate-from-text` (instant catalog rows instead of the engine).
+ * Opt in: `EXPO_PUBLIC_ENABLE_FATSECRET_MEAL_SEARCH=1`
+ */
+export const isFatSecretMealSearchEnabled = () =>
+  isFatSecretConfigured() && expoPublicEnvTruthy('EXPO_PUBLIC_ENABLE_FATSECRET_MEAL_SEARCH');
 
 /* ── Cognito token store + refresh ────────────────────────────────── */
 
@@ -79,6 +149,10 @@ export interface CallBackendOptions {
   params?: Record<string, string | number>;
   /** Per-request timeout in ms (default 15 000). */
   timeoutMs?: number;
+  /** Pass through to `fetch` (e.g. `no-store` for nutrition estimates). */
+  cache?: RequestCache;
+  /** Merged after auth headers (e.g. cache-control for POST). */
+  extraHeaders?: Record<string, string>;
 }
 
 /** Create an AbortController that auto-aborts after `ms`. */
@@ -100,7 +174,14 @@ export async function callBackend<T = unknown>(
   endpoint: string,
   options: CallBackendOptions = {},
 ): Promise<T> {
-  const { method = 'POST', body, params, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
+  const {
+    method = 'POST',
+    body,
+    params,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    cache,
+    extraHeaders,
+  } = options;
   const base = NUTRITION_API_BASE_URL.replace(/\/$/, '');
 
   let url = `${base}${endpoint}`;
@@ -112,13 +193,18 @@ export async function callBackend<T = unknown>(
   }
 
   const timer = timeoutController(timeoutMs);
+  const mergeHeaders = (token?: string | null) => ({
+    ...authHeaders(token),
+    ...(extraHeaders ?? {}),
+  });
 
   try {
     const fetchOpts: RequestInit = {
       method,
-      headers: authHeaders(),
+      headers: mergeHeaders(),
       signal: timer.signal,
       ...(body !== undefined && { body: JSON.stringify(body) }),
+      ...(cache !== undefined && { cache }),
     };
 
     const response = await fetch(url, fetchOpts);
@@ -133,7 +219,7 @@ export async function callBackend<T = unknown>(
         try {
           const retry = await fetch(url, {
             ...fetchOpts,
-            headers: authHeaders(freshToken),
+            headers: mergeHeaders(freshToken),
             signal: retryTimer.signal,
           });
           if (!retry.ok) throw await buildError(retry);
