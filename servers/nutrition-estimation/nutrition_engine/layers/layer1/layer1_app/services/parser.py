@@ -125,7 +125,8 @@ class IngredientParser:
         
         # Clean ingredient name
         ingredient_name = self._clean_ingredient_name(ingredient_name)
-        
+        ingredient_name = self._normalize_plural_ingredient_name(ingredient_name)
+
         # Match to canonical ingredient
         matched_ingredient, confidence = self._match_ingredient(ingredient_name)
         
@@ -213,6 +214,37 @@ class IngredientParser:
         
         return None, text
     
+    def _normalize_plural_ingredient_name(self, name: str) -> str:
+        """Map common plural surface forms to singular so lookup/synonyms hit (e.g. eggs → egg)."""
+        n = (name or "").strip().lower()
+        if not n:
+            return name
+        # (plural_or_variant, singular) — whole-word replacement, longer tokens first
+        pairs = (
+            ("egg whites", "egg white"),
+            ("egg yolks", "egg yolk"),
+            ("eggs", "egg"),
+            ("tomatoes", "tomato"),
+            ("potatoes", "potato"),
+            ("onions", "onion"),
+            ("carrots", "carrot"),
+            ("apples", "apple"),
+            ("bananas", "banana"),
+            ("oranges", "orange"),
+            ("limes", "lime"),
+            ("lemons", "lemon"),
+            ("cloves", "clove"),
+            ("mushrooms", "mushroom"),
+            ("strawberries", "strawberry"),
+            ("blueberries", "blueberry"),
+            ("avocados", "avocado"),
+            ("yoghurts", "yogurt"),
+            ("yoghurt", "yogurt"),
+        )
+        for plural, singular in pairs:
+            n = re.sub(rf"\b{re.escape(plural)}\b", singular, n)
+        return n.strip()
+
     def _clean_ingredient_name(self, name: str) -> str:
         """Clean and normalize ingredient name."""
         name = name.strip()
@@ -293,6 +325,10 @@ class IngredientParser:
         if ingredient_name_lower in tbl.synonym_to_ingredient:
             row, conf = tbl.synonym_to_ingredient[ingredient_name_lower]
             return row, conf
+        # Plain-language staples (egg, yogurt, milk) often miss long USDA keys; bridge before fuzzy.
+        bridged = self._staple_lookup_bridge(ingredient_name_lower, tbl)
+        if bridged is not None:
+            return bridged
         # Fuzzy over all names
         if not tbl.all_names_with_ingredients:
             return None, 0.0
@@ -316,6 +352,109 @@ class IngredientParser:
                     best_match = row
             return best_match, best_score
         return None, 0.0
+
+    def _staple_lookup_bridge(
+        self, n: str, tbl: "LookupTables"
+    ) -> Optional[Tuple["IngredientRow", float]]:
+        """Map short user phrases to a profiled ingredient row when fuzzy match would miss or mispick."""
+        if not getattr(tbl, "name_to_ingredient", None) or not getattr(tbl, "nutrient_profiles", None):
+            return None
+
+        def _pick(
+            key_ok,
+            sort_key,
+        ) -> Optional[Tuple["IngredientRow", float]]:
+            best: Optional[Tuple[Tuple, "IngredientRow"]] = None
+            for key, row in tbl.name_to_ingredient.items():
+                if not key_ok(key):
+                    continue
+                if row.id not in tbl.nutrient_profiles:
+                    continue
+                sk = sort_key(key)
+                if best is None or sk < best[0]:
+                    best = (sk, row)
+            if best is None:
+                return None
+            return best[1], 0.88
+
+        # --- egg (exclude eggplant, noodles, replacers) ---
+        if "egg" in n and "eggplant" not in n and "egg roll" not in n and "egg foo" not in n:
+
+            def egg_ok(k: str) -> bool:
+                if "egg" not in k:
+                    return False
+                bad = (
+                    "eggplant",
+                    "egg roll",
+                    "egg foo",
+                    "noodle",
+                    "substitute",
+                    "replacer",
+                    "white cake",
+                    "yellow cake",
+                )
+                return not any(b in k for b in bad)
+
+            def egg_sort(k: str) -> Tuple[int, int]:
+                # Prefer FDC-style "egg, ..." / "eggs, ..." then shorter keys.
+                pri = 0 if (k.startswith("egg,") or k.startswith("eggs,")) else 1
+                return (pri, len(k))
+
+            hit = _pick(egg_ok, egg_sort)
+            if hit:
+                return hit
+
+        # --- yogurt ---
+        if "yogurt" in n or "yoghurt" in n:
+            frozen_q = "frozen" in n
+
+            def yogurt_ok(k: str) -> bool:
+                if "yogurt" not in k and "yoghurt" not in k:
+                    return False
+                if not frozen_q and "frozen" in k:
+                    return False
+                bad = ("yogurt covered", "yogurt coating", "dressing", "dip mix", "sauce")
+                return not any(b in k for b in bad)
+
+            def yogurt_sort(k: str) -> Tuple[int, int]:
+                greek_q = "greek" in n
+                pri = 0
+                if greek_q:
+                    pri = 0 if "greek" in k else 1
+                else:
+                    if "greek" in k:
+                        pri = 1
+                    elif "plain" in k or k.startswith("yogurt,") or k.startswith("yoghurt,"):
+                        pri = 0
+                    else:
+                        pri = 2
+                return (pri, len(k))
+
+            hit = _pick(yogurt_ok, yogurt_sort)
+            if hit:
+                return hit
+
+        # --- cow's milk (narrow triggers to avoid plant milks) ---
+        if n in ("milk", "whole milk", "skim milk", "2% milk", "2 percent milk", "lowfat milk", "low fat milk", "fat free milk", "1% milk", "vitamin d milk"):
+            plant = ("almond", "coconut", "soy", "oat", "rice", "hemp", "cashew")
+
+            def milk_ok(k: str) -> bool:
+                if "milk" not in k:
+                    return False
+                if any(p in k for p in plant):
+                    return False
+                bad = ("milkshake", "milk chocolate", "condensed", "evaporated", "dry milk", "formula", "infant")
+                return not any(b in k for b in bad)
+
+            def milk_sort(k: str) -> Tuple[int, int]:
+                pri = 0 if ("fluid" in k or "vitamin" in k or k.startswith("milk,")) else 1
+                return (pri, len(k))
+
+            hit = _pick(milk_ok, milk_sort)
+            if hit:
+                return hit
+
+        return None
 
     def _build_ingredient_cache(self) -> None:
         """Build cache of ingredients by name (DB path only)."""
@@ -410,8 +549,14 @@ class IngredientParser:
         if "cheese" in name or "cheese" in category:
             return 28.0
         # Eggs
-        if "egg" in name:
+        if "egg" in name and "eggplant" not in name:
             return 50.0
+        # Yogurt (single-serve / small tub when user says "1 yogurt" with no grams)
+        if "yogurt" in name or "yoghurt" in name:
+            return 170.0
+        # Cow's milk as a drink (roughly one cup when counted as "piece")
+        if "milk" in name and not any(p in name for p in ("almond", "coconut", "soy", "oat", "rice", "hemp")):
+            return 244.0
         # Garlic/ginger
         if unit == "clove" or "garlic" in name:
             return 5.0

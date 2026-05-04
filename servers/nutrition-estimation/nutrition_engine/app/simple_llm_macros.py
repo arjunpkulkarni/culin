@@ -77,6 +77,10 @@ def estimate_free_text_via_simple_llm(
     macros = _clamp_macros(raw)
     name = str(raw.get("item_name") or t).strip()[:200]
 
+    # If the model returns all zeros, fall back to the Layer 0 + L1→L3 pipeline (USDA-backed).
+    if sum(macros.get(k, 0.0) for k in ("calories", "protein", "carbs", "fat")) < 1e-6:
+        raise ValueError("simple_llm_returned_zero_macros")
+
     rationale = raw.get("rationale_brief")
     return {
         "macros": macros,
