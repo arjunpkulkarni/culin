@@ -1,4 +1,5 @@
 import Logo from "@/src/components/Logo";
+import SourcesFooter from "@/src/components/SourcesFooter";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { formatDate, getGreeting } from "@/src/utils/dateUtils";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -175,6 +176,8 @@ export default function MealRecommendationsScreen() {
             ))}
           </View>
         </View>
+
+        <SourcesFooter />
 
         <View style={styles.bottomSpacer} />
       </ScrollView>

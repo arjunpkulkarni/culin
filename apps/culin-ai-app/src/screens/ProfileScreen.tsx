@@ -418,6 +418,22 @@ export default function ProfileScreen() {
 
         {/* Bottom actions */}
         <View style={styles.actionsCard}>
+          <Pressable
+            style={styles.signOutRow}
+            onPress={() => router.push('/sources' as any)}
+          >
+            <MaterialIcons name="menu-book" size={20} color={colors.neutral.blackSoft} />
+            <Text style={styles.signOutText}>Nutrition information &amp; sources</Text>
+            <MaterialIcons
+              name="chevron-right"
+              size={20}
+              color={colors.neutral.gray300}
+              style={styles.actionChevron}
+            />
+          </Pressable>
+
+          <View style={styles.actionDivider} />
+
           <Pressable style={styles.signOutRow} onPress={handleSignOut}>
             <MaterialIcons name="logout" size={20} color={colors.neutral.blackSoft} />
             <Text style={styles.signOutText}>Sign out</Text>

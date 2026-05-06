@@ -2,6 +2,7 @@ import { AnimatedPressableComponent } from "@/src/components/AnimatedPressable";
 import { AnimatedScreen } from "@/src/components/AnimatedScreen";
 import { AnimatedText } from "@/src/components/AnimatedText";
 import Logo from "@/src/components/Logo";
+import SourcesFooter from "@/src/components/SourcesFooter";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { formatDate, getGreeting } from "@/src/utils/dateUtils";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -184,16 +185,36 @@ export default function MealLogScreen() {
       setLoading(true);
       try {
         const { foodName, calories, protein, carbs, fat } = recipeFromNavigator;
+        let cal = calories;
+        let prot = protein;
+        let carb = carbs;
+        let fatG = fat;
+
+        // Always re-run nutrition engine here; route params can carry stale recipe totals.
+        if (isNutritionApiConfigured()) {
+          try {
+            const estimate = await estimateFromText(foodName);
+            if (estimate?.macros && !isZeroEstimate(estimate.macros)) {
+              cal = estimate.macros.calories ?? cal;
+              prot = estimate.macros.protein ?? prot;
+              carb = estimate.macros.carbs ?? carb;
+              fatG = estimate.macros.fat ?? fatG;
+            }
+          } catch (err) {
+            console.warn('[CulinAI] Recipe shortcut re-estimate failed; using passed-in totals', err);
+          }
+        }
+
         await persistMeal({
           foodName,
-          calories,
-          protein,
-          carbs,
-          fat,
+          calories: cal,
+          protein: prot,
+          carbs: carb,
+          fat: fatG,
           mealType: getDefaultMealType(),
           date: todayISO,
         });
-        const macrosSaved = { calories, protein, carbs, fat };
+        const macrosSaved = { calories: cal, protein: prot, carbs: carb, fat: fatG };
         const macroLine = formatMacrosForLogConfirmation(macrosSaved);
         console.log('[CulinAI][MealLogged]', macroLine);
         Alert.alert('Meal logged', macroLine);
@@ -387,7 +408,7 @@ export default function MealLogScreen() {
                   <>
                     <MaterialIcons name="post-add" size={20} color="#fff" />
                     <AnimatedText variant="button" style={styles.recipeFromSheetBtnText}>
-                      Log using recipe totals
+                      Re-estimate & log
                     </AnimatedText>
                   </>
                 )}
@@ -572,6 +593,8 @@ export default function MealLogScreen() {
               <AnimatedText variant="h4" style={styles.kcal}>{meal.calories} kcal</AnimatedText>
             </AnimatedPressableComponent>
           ))}
+
+          <SourcesFooter />
         </ScrollView>
       </AnimatedScreen>
     );
