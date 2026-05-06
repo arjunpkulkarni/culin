@@ -1,4 +1,5 @@
 import Logo from '@/src/components/Logo';
+import SourcesSection from '@/src/components/SourcesSection';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { colors, fontFamily, radius, shadows, spacing } from '@/src/design/tokens';
 import { isNutritionApiConfigured } from '@/src/config/api';
@@ -640,6 +641,8 @@ export default function MealResultsScreen() {
                 </View>
               </Section>
             )}
+
+            <SourcesSection />
           </Animated.View>
         )}
       </ScrollView>

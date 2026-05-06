@@ -6,6 +6,7 @@ import { PrimaryActionBar, type PrimaryAction } from '@/src/components/PrimaryAc
 import { ProfileButton } from '@/src/components/ProfileButton';
 import { QuickLogModal } from '@/src/components/QuickLogModal';
 import { StatusLine } from '@/src/components/StatusLine';
+import SourcesFooter from '@/src/components/SourcesFooter';
 import { Suggestion, SuggestionCard } from '@/src/components/SuggestionCard';
 import { colors, fontFamily, radius, shadows } from '@/src/design/tokens';
 import { isNutritionApiConfigured } from '@/src/config/api';
@@ -654,6 +655,8 @@ export default function MealRecommenderScreen() {
             </Text>
           </Animated.View>
         )}
+
+        <SourcesFooter />
       </ScrollView>
 
       {/* Contextual sticky action bar */}

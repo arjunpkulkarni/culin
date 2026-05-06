@@ -403,6 +403,10 @@ export default function OnboardingScreen() {
               multiple={true}
               columns={2}
             />
+            <Text style={styles.medicalDisclaimer}>
+              CulinAI is not a medical service. We use this only to tailor general food
+              ideas — always talk to your doctor before changing your diet.
+            </Text>
           </QuestionCard>
         );
 
@@ -574,5 +578,13 @@ const styles = StyleSheet.create({
   },
   nextButtonContainer: {
     flex: 2,
+  },
+  medicalDisclaimer: {
+    marginTop: spacing.lg,
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#6b7280',
+    textAlign: 'center',
+    paddingHorizontal: spacing.sm,
   },
 });
