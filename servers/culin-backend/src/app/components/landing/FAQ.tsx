@@ -12,7 +12,7 @@ export default function FAQ() {
         {/* Header */}
         <div className="mb-16">
           <span className="text-xs font-mono uppercase tracking-[0.16em] text-culinGreen mb-4 block">
-            03 — FAQs
+            07 — FAQs
           </span>
           <h2 className="text-5xl md:text-6xl text-culinText leading-tight">
             Questions

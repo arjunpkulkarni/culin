@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Culin",
-  description: "Culin is a culinary assistant that helps you create recipes and learn about food.",
+  title: "CulinAI — Adaptive Culinary Intelligence",
+  description:
+    "CulinAI helps chefs and food teams create balanced, culturally grounded dishes through adaptive ingredient, technique, and flavor recommendations.",
 };
 
 export default function RootLayout({

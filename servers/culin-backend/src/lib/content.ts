@@ -1,144 +1,201 @@
 export const content = {
-  // Hero Section
   hero: {
-    title: "The Food Decision Engine",
-    emailPlaceholder: "Enter your email",
-    ctaPrimary: "Get Early Access",
-    ctaHelper: "to accelerate access: info.culinai@gmail.com"
+    title: "AI for chefs, not just recipes.",
+    subtitle:
+      "CulinAI helps chefs create balanced, culturally grounded dishes through adaptive ingredient, technique, and flavor recommendations.",
+    tagline: "Adaptive culinary intelligence for chefs and food teams.",
+    positioning: [
+      "Not a recipe bot.",
+      "Not a meal planner.",
+      "A creative engine for professional food development.",
+    ],
+    ctaPrimary: "Request Demo",
+    ctaSecondary: "Join Waitlist",
+    ctaHelper: "Questions? info.culinai@gmail.com",
   },
 
-  // Announcement Bar
   announcement: {
-    text: "Introducing Culin Decision Engine",
-    link: "#"
+    text: "Introducing CulinAI",
+    link: "#demo",
   },
 
-  // Marquee Ticker
   ticker: [
-    "Busy students",
-    "Gym + macro trackers",
-    "Professionals on the go",
-    "People who hate deciding",
-    "Meal preppers",
-    "Time-crunched parents"
+    "Professional chefs",
+    "Culinary R&D teams",
+    "Food brands",
+    "Healthcare foodservice",
+    "Culinary educators",
+    "Conference & innovation labs",
   ],
 
-  // Value Grid
-  valueGrid: [
-    {
-      title: "Zero Decision Fatigue",
-      description: "Stop scrolling through Uber Eats, DoorDash, and recipes. Culin gives you one optimized choice instantly.",
-      wide: true
-    },
-    {
-      title: "Built for Real Life",
-      description: "Culin learns your schedule, diet goals, taste, and budget.",
-      wide: false
-    },
-    {
-      title: "Order or Cook",
-      description: "Want delivery? Done. Want groceries to cook? Also done. One decision → fastest path to eating.",
-      wide: false
-    }
-  ],
-
-  // Features Tabs
-  featureTabs: [
-    { id: "restaurant", label: "Restaurant Recs" },
-    { id: "grocery", label: "Grocery Intelligence" },
-    { id: "macro", label: "Macro-Aware" },
-    { id: "scrolling", label: "No Scrolling" }
-  ],
-
-  // Features Content
-  features: {
-    restaurant: {
-      title: "Restaurant Recommendations",
-      description: "Find the best meals from nearby restaurants based on your nutrition goals."
-    },
-    grocery: {
-      title: "Grocery Intelligence",
-      description: "Build smarter grocery carts that match your macros and meals."
-    },
-    macro: {
-      title: "Macro-Aware Decisions",
-      description: "Protein, calories, dietary preferences — automatically considered."
-    },
-    scrolling: {
-      title: "No More Scrolling",
-      description: "Culin turns thousands of options into one great choice."
-    }
+  howItWorks: {
+    label: "01 — How It Works",
+    title: "Build dishes step-by-step",
+    steps: [
+      {
+        number: "01",
+        title: "Start with an idea",
+        description:
+          "Begin with an ingredient, flavor profile, or dish concept. CulinAI meets you where your creative process starts.",
+      },
+      {
+        number: "02",
+        title: "Get adaptive suggestions",
+        description:
+          "CulinAI suggests next moves across compounds, regional cuisine patterns, and real-world co-occurrence data.",
+      },
+      {
+        number: "03",
+        title: "Refine with balance checks",
+        description:
+          "The dish updates step-by-step. Every addition is evaluated for flavor balance so you stay in control.",
+      },
+    ],
   },
 
-  // Testimonials
-  testimonials: [
-    {
-      quote: "I used to spend 30 minutes deciding what to eat. Now it's instant.",
-      author: "Sarah Chen",
-      role: "UIUC Student"
-    },
-    {
-      quote: "Perfect for tracking macros without the mental overhead.",
-      author: "Marcus Johnson",
-      role: "Gym Enthusiast"
-    },
-    {
-      quote: "As a founder, I need fast decisions. Culin delivers.",
-      author: "Emily Rodriguez",
-      role: "Startup Founder"
-    }
-  ],
-
-  // Privacy Section (replaces Security)
-  privacy: {
-    title: "Privacy First",
-    subtitle: "Your meal data stays yours",
-    items: [
-      { title: "End-to-End Encryption", icon: "lock" },
-      { title: "Data Controls", icon: "shield" },
-      { title: "Minimal Collection", icon: "eye-off" },
-      { title: "Delete Anytime", icon: "trash" }
-    ]
+  intelligenceLenses: {
+    label: "02 — Three Intelligence Lenses",
+    title: "Three ways CulinAI thinks about food",
+    lenses: [
+      {
+        title: "Compounds",
+        description:
+          "Flavor chemistry and ingredient compatibility. Understand which molecules pair, clash, and amplify.",
+        icon: "flask",
+      },
+      {
+        title: "Regional Cuisine",
+        description:
+          "Cuisine-specific ingredient and technique patterns grounded in culinary tradition and regional context.",
+        icon: "globe",
+      },
+      {
+        title: "Co-occurrence",
+        description:
+          "Real-world recipe patterns from a 1M+ recipe corpus. See what actually works in professional kitchens.",
+        icon: "data",
+      },
+    ],
   },
 
-  // FAQs
+  stepwisePass: {
+    label: "03 — Stepwise Pass",
+    title: "Balance after every addition",
+    description:
+      "CulinAI evaluates the dish after every addition across five dimensions of flavor balance.",
+    dimensions: ["Salt", "Fat", "Acid", "Heat", "Umami"],
+    example:
+      "This dish is trending acidic. Consider adding starch, sweetness, or fat to balance it.",
+  },
+
+  whoItsFor: {
+    label: "04 — Who It's For",
+    title: "Built for professional food development",
+    audiences: [
+      {
+        title: "Chefs",
+        description:
+          "Explore new combinations, refine dishes, and push creative boundaries with science-backed guidance.",
+      },
+      {
+        title: "Food Brands",
+        description:
+          "Accelerate product development with adaptive recommendations grounded in flavor science and real recipe data.",
+      },
+      {
+        title: "Culinary R&D Teams",
+        description:
+          "Prototype faster. Test ingredient pairings and technique variations with a stepwise creative engine.",
+      },
+      {
+        title: "Healthcare Foodservice",
+        description:
+          "Develop flavorful, balanced dishes that meet nutritional and dietary requirements without sacrificing taste.",
+      },
+      {
+        title: "Culinary Educators",
+        description:
+          "Teach flavor science and creative technique with an interactive tool students can explore hands-on.",
+      },
+    ],
+  },
+
+  team: {
+    label: "05 — Team",
+    title: "Built by culinary and AI pioneers",
+    members: [
+      {
+        name: "James Briscione",
+        role: "Culinary Director & Co-founder",
+        bio: "Author of The Flavor Matrix. Former Director of Culinary Research at the Institute of Culinary Education. Led IBM Chef Watson.",
+      },
+      {
+        name: "Lav Varshney",
+        role: "Chief Scientist & Co-founder",
+        bio: "AI researcher and professor. Pioneer in computational creativity for food, flavor, and sensory science.",
+      },
+    ],
+    credibility: "Built on research from Chef Watson and The Flavor Matrix.",
+  },
+
+  demoForm: {
+    label: "06 — Get Started",
+    title: "Request a demo",
+    subtitle: "Tell us about your team and what you're building with food.",
+    fields: {
+      name: "Name",
+      email: "Email",
+      company: "Company",
+      role: "Role",
+      building: "What are you building with food?",
+    },
+    ctaPrimary: "Request Demo",
+    ctaSecondary: "Join Waitlist",
+    successMessage: "Thanks — we'll be in touch shortly.",
+  },
+
   faqs: [
     {
-      question: "Is Culin a full meal planner?",
-      answer: "No — Culin is a decision engine. It tells you what to eat right now."
+      question: "Is CulinAI a recipe generator?",
+      answer:
+        "No. CulinAI is an adaptive culinary intelligence platform — a creative engine for professional food development, not a meal planner or recipe bot.",
     },
     {
-      question: "Can it follow my macros?",
-      answer: "Yes. Culin can recommend meals based on protein, calories, and nutrition goals."
+      question: "Who is CulinAI built for?",
+      answer:
+        "CulinAI is designed for chefs, culinary R&D teams, food brands, healthcare foodservice, and culinary educators who need science-backed creative guidance.",
     },
     {
-      question: "Do I have to track calories?",
-      answer: "No. Tracking is optional."
+      question: "How does the balance engine work?",
+      answer:
+        "After every ingredient or technique addition, CulinAI evaluates the dish across salt, fat, acid, heat, and umami — surfacing suggestions to keep the dish balanced.",
     },
     {
-      question: "Can it use restaurant menus?",
-      answer: "Yes. Culin analyzes menus to find the best items for your goals."
+      question: "What data powers the recommendations?",
+      answer:
+        "CulinAI draws on flavor compound science, regional cuisine patterns, and co-occurrence data from a 1M+ recipe corpus.",
     },
     {
-      question: "What if I don't like the suggestion?",
-      answer: "You can always generate another option instantly."
-    }
+      question: "Can I request a demo for my team?",
+      answer:
+        "Yes. Fill out the form below or email info.culinai@gmail.com and we'll set up a walkthrough for your team.",
+    },
   ],
 
-  // Footer CTA
   footerCta: {
-    title: "Stop deciding. Start eating.",
-    subtitle: "Join the waitlist.",
-    ctaPrimary: "Get Early Access",
-    ctaSecondary: "Contact Us"
+    title: "Adaptive culinary intelligence for chefs and food teams.",
+    subtitle: "Request a demo or join the waitlist.",
+    ctaPrimary: "Request Demo",
+    ctaSecondary: "Contact Us",
   },
 
-  // Navigation
   nav: {
     links: [
       { label: "How It Works", href: "#how-it-works" },
-      { label: "Features", href: "#features" },
-      { label: "Privacy", href: "#privacy" }
-    ]
-  }
+      { label: "Intelligence", href: "#intelligence" },
+      { label: "Who It's For", href: "#who-its-for" },
+      { label: "Team", href: "#team" },
+      { label: "Demo", href: "#demo" },
+    ],
+  },
 };
